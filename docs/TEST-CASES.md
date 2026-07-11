@@ -11,3 +11,13 @@
 7. Notes: Note for this test case. Text editor.
 8. Script: the automation script that run this test case. Text field.
 9. Arguments: arguments for script. Text field.
+
+## Test case template fields
+
+1. Name: text field, required.
+2. Template: content of the template, text editor.
+
+## Test category
+
+1. Name: text field, required.
+2. Description: text editor.
