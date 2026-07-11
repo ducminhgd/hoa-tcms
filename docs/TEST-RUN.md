@@ -1,5 +1,7 @@
 # Test Run
 
+A collection of test cases executed for a specific build/environment
+
 ## Fields
 
 1. Summary: text field. required
@@ -14,5 +16,9 @@
 
 ## List of test cases to run
 
-User can add test cases into the test run. And, when adding, the test case has its status in this run: IGNORE, FAILED, PASS, NOT TESTED, WARNING. Default `NOT TESTED`.
+User can add test cases into the test run, and they will be run by test execution(s).
 The result of the test case in this test run does not effect its result in other test runs.
+
+## List of test executions
+
+From a test run, we can get the list of test executions that were executed for it.
