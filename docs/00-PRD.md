@@ -155,6 +155,8 @@ Bottom:
 1. Security: avoid top 10 OWASP risks.
 2. Source code MUST NOT contain any secret information.
 3. Avoid memory leak and memory over-used.
+4. Utilize using environment variables, YAML configurations
+5. Can setup storage directory to store uploaded files.
 
 ### Technical Stack
 
