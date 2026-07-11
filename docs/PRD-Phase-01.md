@@ -1,6 +1,6 @@
 # PRD — HOA Test Case Management System (TCMS)
 
-**Version:** 3.0
+**Version:** 3.2
 **Status:** Draft
 **Author:** Product Team
 **Last Updated:** 2026-07-11
@@ -274,7 +274,7 @@ metadata within the **current project context** selected in the UI.
 | FR-37 | The system **must** provide an "Import Test Cases" button when a Test Run is selected. Clicking opens a dialog where the user selectively checks which test cases to import. | P1 | Imported test cases become Test Case Results in this execution. |
 | FR-38 | Each imported Test Case Result **must** clone the test case's summary, description, and priority at import time (snapshot). Additional fields: Result (NOT TESTED, IN PROGRESS, PASS, FAIL, WARNING, IGNORE; default NOT TESTED), Attached Files, Logs (text area). | P1 | Snapshot is frozen at import time. Original test case changes do not retroactively alter existing results. |
 | FR-39 | Re-importing a test case that already exists in the execution **must** refresh the snapshot fields (summary, description, priority) from the current source test case, but **must preserve** the existing Result status, logs, and attached files. | P1 | Enables updating metadata without losing tester work. |
-| FR-40 | The system **must** allow updating each Test Case Result's status, attached files, and logs independently. | P1 | |
+| FR-40 | The system **must** allow updating each Test Case Result's status, attached files, and logs independently. | P1 | `tested_by` is set once when the result first transitions away from NOT TESTED, and is not modified thereafter. `updated_by` changes on every subsequent UPDATE per the audit column rules. |
 | FR-41 | The system **must** allow adding additional test cases to the execution beyond those imported from the run. | P1 | |
 | FR-42 | The result of a Test Case in one Test Execution **must not** affect its result in any other Test Execution. | P1 | Execution-scoped isolation. |
 | FR-43 | The Test Execution detail view **must** show: execution info, list of Test Case Results (each updatable inline), with the ability to drill into each result's detail. | P1 | |
@@ -301,9 +301,12 @@ metadata within the **current project context** selected in the UI.
 
 | ID | Requirement | Priority | Notes / Edge Cases |
 |----|-------------|----------|--------------------|
-| FR-52 | The system **must** use soft-delete (`deleted_at` timestamp) for all entities. No hard delete. | P1 | Deleted records are hidden from all views. |
+| FR-52 | The system **must** use soft-delete (`deleted_at` timestamp, `deleted_by` user reference) for all entities. No hard delete. | P1 | Deleted records are hidden from all views. `deleted_by` records who performed the deletion and is **always populated** on application-performed soft-deletes. NULL only from direct DB operations outside the application. Junction tables and OBJECT_SHARING use hard delete (no soft-delete). |
 | FR-53 | Deleting a parent entity **must not** cascade-delete children. Children are hidden while parent is deleted. | P1 | Deactivated projects hide their test cases, runs, and executions from views. Data is preserved. |
 | FR-54 | Deactivated objects (Status = INACTIVE) **must** be hidden from list views and selection fields, but existing references remain intact. | P1 | |
+| FR-54a | Every mutable table **must** have audit column pairs: `created_at` & `created_by`, `updated_at` & `updated_by`, `deleted_at` & `deleted_by`. All timestamp columns are `TIMESTAMPTZ NOT NULL` except `deleted_at` (nullable). All `_by` columns are `BIGINT NOT NULL` FK → `users.id` except: `deleted_by` (nullable), and `users.created_by` (nullable — the CLI bootstrap admin has no creator). | P1 | Read-only reference tables (e.g. `permissions`) carry only `created_at`. Junction tables get `created_at` only (hard delete, no audit pairs). |
+| FR-54b | On first insert, the system **must** set `updated_at = created_at` and `updated_by = created_by`. On subsequent updates, only `updated_at` and `updated_by` are modified; `created_at` and `created_by` are immutable after insert. | P1 | `updated_at`/`updated_by` auto-maintained by DB trigger (`BEFORE UPDATE` sets them to `NOW()` and current user). Immutability of `created_at`/`created_by` enforced at application layer (repository rejects writes with a clear error). |
+| FR-54c | The application **must** reject UPDATE operations on soft-deleted rows (`deleted_at IS NOT NULL`), except for: (a) the initial soft-delete itself which sets `deleted_at` and `deleted_by`, and (b) a restore operation which clears `deleted_at` and `deleted_by` to NULL. | P1 | Prevents accidental modification of dead records. Restore may be implemented in a future phase. |
 
 ### 4.12 General UI Rules
 
@@ -552,7 +555,9 @@ erDiagram
     varchar status
     bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
     timestamptz updated_at
+    bigint deleted_by FK
     timestamptz deleted_at
   }
 
@@ -561,21 +566,30 @@ erDiagram
     varchar name
     text description
     varchar status
+    bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
     timestamptz updated_at
+    bigint deleted_by FK
     timestamptz deleted_at
   }
 
   ROLES {
     bigint id PK
     varchar name
+    bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
+    timestamptz updated_at
+    bigint deleted_by FK
+    timestamptz deleted_at
   }
 
   PERMISSIONS {
     bigint id PK
     varchar name
     varchar code UK
+    timestamptz created_at
   }
 
   PROJECTS {
@@ -585,7 +599,9 @@ erDiagram
     varchar status
     bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
     timestamptz updated_at
+    bigint deleted_by FK
     timestamptz deleted_at
   }
 
@@ -594,8 +610,11 @@ erDiagram
     bigint project_id FK
     varchar name
     text description
+    bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
     timestamptz updated_at
+    bigint deleted_by FK
     timestamptz deleted_at
   }
 
@@ -604,8 +623,11 @@ erDiagram
     bigint project_id FK
     varchar name
     text template_content
+    bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
     timestamptz updated_at
+    bigint deleted_by FK
     timestamptz deleted_at
   }
 
@@ -621,7 +643,9 @@ erDiagram
     text arguments
     bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
     timestamptz updated_at
+    bigint deleted_by FK
     timestamptz deleted_at
   }
 
@@ -634,7 +658,9 @@ erDiagram
     varchar status
     bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
     timestamptz updated_at
+    bigint deleted_by FK
     timestamptz deleted_at
   }
 
@@ -651,7 +677,9 @@ erDiagram
     timestamptz planned_stop
     bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
     timestamptz updated_at
+    bigint deleted_by FK
     timestamptz deleted_at
   }
 
@@ -661,7 +689,9 @@ erDiagram
     bigint test_run_id FK
     bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
     timestamptz updated_at
+    bigint deleted_by FK
     timestamptz deleted_at
   }
 
@@ -675,8 +705,12 @@ erDiagram
     varchar result
     text logs
     bigint tested_by FK
+    bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
     timestamptz updated_at
+    bigint deleted_by FK
+    timestamptz deleted_at
   }
 
   OBJECT_SHARING {
@@ -685,7 +719,10 @@ erDiagram
     varchar resource_type
     bigint resource_id
     varchar role
+    bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
+    timestamptz updated_at
   }
 
   FILES {
@@ -696,8 +733,11 @@ erDiagram
     bigint size_bytes
     varchar owner_type
     bigint owner_id
-    bigint uploaded_by FK
+    bigint created_by FK
     timestamptz created_at
+    bigint updated_by FK
+    timestamptz updated_at
+    bigint deleted_by FK
     timestamptz deleted_at
   }
 ```
@@ -705,7 +745,8 @@ erDiagram
 **Key design decisions:**
 - **Junction tables** for all N:N relationships: `user_groups`, `user_roles`, `group_roles`,
   `role_permissions`, `project_members`, `test_case_categories`, `test_plan_projects`,
-  `test_run_cases`, `execution_testers` (all with composite PKs).
+  `test_run_cases`, `execution_testers` (all with composite PKs). Junction tables
+  carry only `created_at` (hard delete, no audit pairs).
 - **Test Run → Test Plan:** FK on `test_runs.plan_id` — a run belongs to at most one plan.
 - **Test Plan types** stored as `JSONB` array on `test_plans`.
 - **Object Sharing:** Polymorphic table (`resource_type` + `resource_id`) for sharing any
@@ -715,8 +756,13 @@ erDiagram
   Test Case Results.
 - **Test Case Results** clone summary, description, priority at import time (snapshot).
   Re-import updates these three fields but preserves `result`, `logs`, and file references.
-- **Audit columns** (`created_at`, `updated_at`, `created_by`) on all mutable tables.
-- **Soft deletes** (`deleted_at`) on all entities. No cascade delete.
+- **Audit column pairs** on all mutable tables:
+  - `created_at` (TIMESTAMPTZ, NOT NULL, DEFAULT NOW()) & `created_by` (BIGINT FK → users.id, NOT NULL)
+  - `updated_at` (TIMESTAMPTZ, NOT NULL, DEFAULT NOW()) & `updated_by` (BIGINT FK → users.id, NOT NULL)
+  - `deleted_at` (TIMESTAMPTZ, nullable) & `deleted_by` (BIGINT FK → users.id, nullable)
+  - **First-insert rule:** When a record is first created, `updated_at = created_at` and `updated_by = created_by`. On subsequent updates, only `updated_at` and `updated_by` are touched; `created_at` and `created_by` are never modified after insert.
+- Read-only reference tables (e.g. `permissions`) carry only `created_at`.
+- **Soft deletes** (`deleted_at`) on all entities. `deleted_by` records who performed the deletion. No cascade delete.
 - **JSONB** used for `test_plans.types` (multi-select enum storage) to avoid an extra junction
   table for a small, bounded set.
 
@@ -919,3 +965,5 @@ flowchart LR
 | 1.0 | — | Product Team | Initial fragmented docs (IAM, Project, Test Plan, Test Cases, Test Run, Test Execution) |
 | 2.0 | 2026-07-11 | Product Team | Consolidated all documents into single comprehensive PRD with diagrams. |
 | 3.0 | 2026-07-11 | Product Team | Rewritten after grilling session. Fixed: three-layer auth model, per-project metadata with config seeding, re-import flow, soft-delete policy, Test Run→Plan FK (not junction), added IN PROGRESS status, file attachments on Test Cases, sharing override logic, resolved 4 open questions, added 15 missing requirements. |
+| 3.1 | 2026-07-11 | Product Team | Added audit column pairs (`created_at` & `created_by`, `updated_at` & `updated_by`, `deleted_at` & `deleted_by`) to all ERD entities and functional requirements. Added first-insert rule: `updated_at = created_at`, `updated_by = created_by`. PERMISSIONS table (read-only) carries only `created_at`. |
+| 3.2 | 2026-07-11 | Product Team | Grill session refinements: `users.created_by` nullable (CLI bootstrap admin has no creator). Junction tables → `created_at` only, hard delete. OBJECT_SHARING → hard delete (no `deleted_at`/`deleted_by`). FILES → dropped `uploaded_by` (audit `created_by` records the uploader). `tested_by` set-once semantics. Trigger/app-layer split: trigger for `updated_at`/`updated_by` maintenance; app-layer enforcement for `created_at`/`created_by` immutability and UPDATE blocking on soft-deleted rows. Added FR-54c (block UPDATE on soft-deleted rows). |
