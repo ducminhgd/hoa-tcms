@@ -112,6 +112,8 @@ control session lifetime and cookie security settings per deployment environment
 - Sliding session expiration (TTL is fixed and not refreshed on activity).
 - Session list or session management UI (admin cannot view/revoke active sessions).
 - Audit logging of login/logout events (deferred to a cross-cutting audit feature).
+- Session fingerprinting (IP, User-Agent) — sessions are validated by session ID only.
+- Rate limiting on login attempts (deferred to a cross-cutting rate-limiting feature).
 
 ## Dependencies
 

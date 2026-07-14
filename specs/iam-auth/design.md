@@ -82,7 +82,7 @@ The session cookie is set via the `Set-Cookie` response header. The JSON body is
   "data": {
     "user_id": 42,
     "username": "jdoe",
-    "full_name": "John Doe"
+    "fullname": "John Doe"
   }
 }
 ```
@@ -206,10 +206,29 @@ pbkdf2$sha256$c2FsdHlzYWx0eXNhbHQ$600000$kNfF3H...==
 
 | Key | Value | TTL | Example |
 |-----|-------|-----|---------|
-| `session:<session_id>` | JSON: `{"user_id": 42, "created_at": "2026-07-14T10:00:00Z"}` | Configured TTL (default 3600s) | `session:a1b2c3d4-...` → `{"user_id":42,"created_at":"2026-07-14T10:00:00Z"}` |
+| `session:<session_id>` | JSON: `{"user_id": 42, "created_at": "2026-07-14T10:00:00Z", "fingerprint": "a1b2c3d4..."}` | Configured TTL (default 3600s) | `session:a1b2c3d4-...` → `{"user_id":42,"created_at":"2026-07-14T10:00:00Z","fingerprint":"a1b2c3d4..."}` |
 
 The session ID is a UUID v4 generated on login. Redis TTL governs session lifetime; there
 is no sliding expiration (the TTL is not refreshed on each request).
+
+**Redis security note:** Session data stored in Redis is in plaintext JSON. Redis must be
+deployed on a trusted network, protected with a strong password (`REQUIREPASS`), and
+configured with TLS encryption (`tls-port`). In environments where Redis is shared or
+exposed to non-trusted networks, consider encrypting session payloads before storage
+or using a dedicated Redis instance for sessions.
+
+### Session fingerprint
+
+A SHA-256 hash of the `User-Agent` header is stored in the session payload as `fingerprint`.
+On every authenticated request, the middleware computes the hash of the request's `User-Agent`
+and compares it against the stored value. A mismatch triggers session re-authentication
+(returns `401 Unauthorized` and deletes the stale session). This mitigates session hijacking
+via cookie theft — an attacker with a stolen cookie cannot use it from a different browser.
+
+The fingerprint is an additional security layer, not a substitute for cookie security
+attributes. It is not available in environments where the User-Agent varies legitimately
+(e.g., API clients) — in such cases the fingerprint check can be relaxed for specific
+integration endpoints (deferred to Phase 2 when API tokens are introduced).
 
 ### Configuration (environment variables)
 
@@ -267,10 +286,16 @@ is no sliding expiration (the TTL is not refreshed on each request).
 3. Call `SessionVerifier::get_session(session_id)` to look up the session in Redis.
 4. If session not found or expired (Redis returns nil), return `401 Unauthorized`.
 5. Deserialize the session payload to get `user_id`.
-6. Call `UserRepository::find_by_id(user_id)` to load the user.
-7. If user not found or `deleted_at IS NOT NULL`, return `401 Unauthorized`.
+6. **Fingerprint check:** Compute SHA-256 of the request's `User-Agent` header and compare
+   against the `fingerprint` field in the session payload. If the fingerprint is present in
+   the session and does not match, delete the session and return `401 Unauthorized` (stolen
+   cookie detected). This check applies to browser-based sessions; API clients may opt out
+   via a header (deferred to Phase 2 with API tokens).
+7. Call `UserRepository::find_by_id(user_id)` to load the user.
+7. If user not found or `deleted_at IS NOT NULL`, return `401 Unauthorized`. **Delete the session from Redis** (`delete_session`) — a deleted user's session must not persist, even if the user is later restored.
 8. If user `status != ACTIVE`, return `403 Forbidden` (the user had a valid session but
-   has been deactivated).
+   has been deactivated). **Delete the session from Redis** (`delete_session`) — a
+   deactivated user's session must not persist, even if the user is later reactivated.
 9. Attach `(user_id, username)` to the request context for downstream use by handlers
    and authorization middleware.
 10. Pass control to the next handler/middleware.
@@ -284,7 +309,7 @@ is no sliding expiration (the TTL is not refreshed on each request).
 | Component | Layer | Role |
 |-----------|-------|------|
 | `PasswordHash` | Domain (1) | Value object that parses and validates the `pbkdf2$...` format string. Provides accessors: `algorithm()`, `salt()`, `iterations()`, `hash_value()`. Does **not** perform cryptographic verification — that is the responsibility of `PasswordHasher` (Application layer). |
-| `Session` | Domain (1) | Entity representing an authenticated session: `session_id`, `user_id`, `created_at`. |
+| `Session` | Domain (1) | Entity representing an authenticated session: `session_id`, `user_id`, `created_at`, `fingerprint` (optional SHA-256 hash of User-Agent for session hijacking detection). |
 | `LoginUseCase` | Application (2) | Orchestrates user lookup, password verification, and session creation. |
 | `LogoutUseCase` | Application (2) | Orchestrates session deletion on logout. |
 | `SessionVerifier` | Application (2) | Interface (port) for session store operations: `create_session`, `get_session`, `delete_session`. |

@@ -16,8 +16,9 @@
         format parser/validator. Verification is handled by `PasswordHasher` (Application).
 
 - [ ] 2. **Define `Session` entity** — design.md#data-model
-      - Fields: `session_id` (UUID), `user_id` (i64), `created_at` (DateTime<Utc>).
-      - Constructor: `Session::new(user_id: i64) -> Self`.
+      - Fields: `session_id` (UUID), `user_id` (i64), `created_at` (DateTime<Utc>),
+        `fingerprint` (Option<String> — SHA-256 of User-Agent for hijacking detection).
+      - Constructor: `Session::new(user_id: i64, fingerprint: Option<String>) -> Self`.
 
 ## Application Layer
 
@@ -26,7 +27,13 @@
       - The `verify` method uses constant-time comparison.
 
 - [ ] 4. **Define `SessionVerifier` interface (port)** — design.md#components
-      - Methods: `create_session(user_id: i64) -> Result<Session>`, `get_session(session_id: &str) -> Result<Option<Session>>`, `delete_session(session_id: &str) -> Result<()>`.
+      - Methods:
+        - `create_session(user_id: i64, fingerprint: Option<String>) -> Result<Session>`
+        - `get_session(session_id: &str) -> Result<Option<Session>>`
+        - `delete_session(session_id: &str) -> Result<()>`
+        - `delete_all_user_sessions(user_id: i64) -> Result<()>` — delete **all** sessions
+          for a user. Called on password change, user deactivation, or user soft-delete
+          to forcibly terminate all active sessions.
 
 - [ ] 5. **Implement `LoginUseCase`** — design.md#sequence, requirements.md#US-01
       - Receive either `username` or `email` + `password`.
@@ -34,7 +41,8 @@
       - If user not found, return `AuthenticationFailed` error.
       - If user is INACTIVE or deleted, return `AuthenticationFailed` error (same error).
       - Call `PasswordHasher::verify()`; on failure return `AuthenticationFailed`.
-      - On success, call `SessionVerifier::create_session()`.
+      - On success, compute fingerprint SHA-256 hash from `User-Agent` header (passed in
+        from handler) and call `SessionVerifier::create_session()` with fingerprint.
       - After successful verification, check if PBKDF2 iterations have increased; if so,
         re-hash password and call `UserRepository::update_password_hash()`.
 
@@ -59,18 +67,24 @@
 
 - [ ] 9. **Implement `RedisSessionStore`** — design.md#components, design.md#redis-session-schema
       - Use the Rust `redis` crate (or `bb8-redis` for connection pooling).
-      - `create_session(user_id)`: generate UUID v4 for session ID, store JSON payload in
-        Redis at `session:<uuid>` with `SETEX` (set + TTL).
+      - `create_session(user_id, fingerprint)`: generate UUID v4 for session ID, compute
+        fingerprint hash, store JSON payload in Redis at `session:<uuid>` with `SETEX`
+        (set + TTL).
       - `get_session(session_id)`: `GET` the key, deserialize JSON. Return `None` if key
-        does not exist.
+        does not exist. Include fingerprint validation in the deserialized session.
       - `delete_session(session_id)`: `DEL` the key.
+      - `delete_all_user_sessions(user_id)`: `SCAN` for `session:*` keys, filter by
+        `user_id` in the JSON payload, `DEL` matching keys. Use `UNLINK` for non-blocking
+        deletion in production.
       - TTL is read from `SESSION_TTL_SECONDS` environment variable.
+      - Redis connection uses TLS and password authentication as configured via environment
+        variables (`REDIS_TLS_ENABLED`, `REDIS_PASSWORD`).
 
 ## Adapters Layer
 
 - [ ] 10. **Define login/logout request/response DTOs** — design.md#api-contract
        - `LoginRequest`: `username: Option<String>`, `email: Option<String>`, `password: String`.
-       - `LoginResponse`: `user_id, username, full_name`.
+       - `LoginResponse`: `user_id, username, fullname`.
        - `LogoutResponse`: `message`.
        - Error response structs matching the `{ "error": { "code", "message", "details" } }` format.
 
@@ -96,9 +110,12 @@
        - If missing/malformed: return `401 NOT_AUTHENTICATED`.
        - Call `SessionVerifier::get_session()` with session ID.
        - If session not found/expired: return `401`.
+       - **Fingerprint check:** Compute SHA-256 of request `User-Agent` header. If session
+         has a fingerprint stored and it does not match the computed value, delete the session
+         and return `401` (stolen cookie).
        - Load user by ID from `UserRepository::find_by_id()`.
-       - If user not found or deleted: return `401`.
-       - If user status is INACTIVE: return `403 USER_INACTIVE`.
+       - If user not found or deleted: delete session from Redis, return `401`.
+       - If user status is INACTIVE: delete session from Redis, return `403 USER_INACTIVE`.
        - If all checks pass: insert `AuthUser { user_id, username }` into the Actix-Web
          request extensions for downstream handlers and middleware.
 

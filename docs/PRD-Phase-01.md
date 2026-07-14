@@ -372,6 +372,15 @@ metadata within the **current project context** selected in the UI.
 - **Encryption in transit:** TLS 1.2+ required.
 - **OWASP Top 10:** Mitigate all applicable risks (XSS, CSRF, SQL Injection, broken access control,
   security misconfiguration, sensitive data exposure).
+- **XSS prevention:** All user-controlled display fields (fullname, group name, role name,
+  group/role description) must be sanitised on input (strip HTML tags) and output-encoded at
+  the presentation layer. Defence-in-depth requires both input sanitisation and output encoding.
+- **Session security:** Session cookies carry `HttpOnly`, `Secure`, and `SameSite=Lax` flags.
+  Sessions are fingerprinted with the User-Agent hash to detect cookie theft. On password change
+  or user deactivation/soft-delete, all existing sessions are forcibly invalidated.
+- **Password change security:** Changing the password invalidates ALL existing sessions for that
+  user (including the current session), forcing re-authentication. This prevents an attacker
+  with a stolen session from retaining access after the legitimate user changes their password.
 - **Secrets:** Zero secrets in source code. All credentials via environment variables or YAML config.
 - **Secrets storage:** Jira PAT (Phase 2) encrypted before storage.
 
