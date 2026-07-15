@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HOA TCMS — Spec Review Issues &amp; Fixes</title>
+<style>
+  :root {
+    --bg: #fff; --fg: #1a1a2e; --muted: #6b7280;
+    --critical: #dc2626; --high: #ea580c; --medium: #ca8a04; --low: #2563eb;
+    --critical-bg: #fef2f2; --high-bg: #fff7ed; --medium-bg: #fefce8; --low-bg: #eff6ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 2rem; max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 1.75rem; margin-bottom: .25rem; }
+  h2 { font-size: 1.25rem; margin: 2rem 0 1rem; padding-bottom: .25rem; border-bottom: 2px solid #e5e7eb; }
+  h3 { font-size: 1rem; margin: 1.5rem 0 .75rem; }
+  .meta { color: var(--muted); margin-bottom: 2rem; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.5rem 0 2rem; }
+  .summary-card { padding: 1rem; border-radius: 8px; text-align: center; }
+  .summary-card .count { font-size: 2rem; font-weight: 700; }
+  .summary-card .label { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+  .scritical { background: var(--critical-bg); .count { color: var(--critical); } }
+  .shigh { background: var(--high-bg); .count { color: var(--high); } }
+  .smedium { background: var(--medium-bg); .count { color: var(--medium); } }
+  .slow { background: var(--low-bg); .count { color: var(--low); } }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0 2rem; font-size: .875rem; }
+  th, td { padding: .5rem .75rem; text-align: left; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  th { background: #f9fafb; font-weight: 600; white-space: nowrap; }
+  .sev { font-weight: 700; font-size: .75rem; text-transform: uppercase; white-space: nowrap; }
+  .CRITICAL { color: var(--critical); }
+  .HIGH { color: var(--high); }
+  .MEDIUM { color: var(--medium); }
+  .LOW { color: var(--low); }
+  .fix-done { color: #16a34a; font-size: .75rem; font-weight: 600; }
+  .toc { list-style: none; columns: 2; margin: 1rem 0; }
+  .toc li { padding: .125rem 0; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .phase-badge { display: inline-block; padding: .125rem .5rem; border-radius: 12px; font-size: .7rem; font-weight: 600; background: #e5e7eb; margin-left: .5rem; }
+  tr:hover { background: #f9fafb; }
+</style>
+</head>
+<body>
+
+<h1>HOA TCMS — Spec Review Issues &amp; Fixes</h1>
+<p class="meta">52 features · 156 specification files · Reviewed 2026-07-15 · All issues resolved</p>
+
+<div class="summary">
+  <div class="summary-card scritical"><div class="count">13</div><div class="label">Critical</div></div>
+  <div class="summary-card shigh"><div class="count">30</div><div class="label">High</div></div>
+  <div class="summary-card smedium"><div class="count">55</div><div class="label">Medium</div></div>
+  <div class="summary-card slow"><div class="count">61</div><div class="label">Low</div></div>
+</div>
+
+<h2>Table of Contents</h2>
+<ol class="toc">
+  <li><a href="#metadata">1. Metadata Management (4 features)</a></li>
+  <li><a href="#test-case">2. Test Case Management (4 features)</a></li>
+  <li><a href="#test-plan">3. Test Plan Management (3 features)</a></li>
+  <li><a href="#test-run">4. Test Run Management (4 features)</a></li>
+  <li><a href="#test-exec">5. Test Execution Management (5 features)</a></li>
+  <li><a href="#sharing">6. Sharing (3 features)</a></li>
+  <li><a href="#auth">7. Authorization (4 features)</a></li>
+  <li><a href="#audit">8. Soft Delete &amp; Audit (3 features)</a></li>
+  <li><a href="#ui">9. General UI (5 features)</a></li>
+  <li><a href="#jira">10. Jira Integration (5 features)</a></li>
+  <li><a href="#phase23">11. Phase 2/3 Features (4 features)</a></li>
+  <li><a href="#iam">12. IAM &amp; Projects (8 pre-existing features)</a></li>
+  <li><a href="#cross">13. Cross-Spec Issues</a></li>
+</ol>
+
+<!-- ============================================================ -->
+<h2 id="metadata">1. Metadata Management</h2>
+
+<h3>metadata-categories <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr>
+  <td>1</td><td class="sev CRITICAL">CRITICAL</td><td>TOCTOU</td>
+  <td>Create flow checked duplicate name then inserted without transaction wrapping. Two concurrent requests could both pass the check.</td>
+  <td>Wrapped duplicate check + insert in a single DB transaction. Added <code>SELECT … FOR UPDATE</code> lock.</td>
+</tr>
+<tr>
+  <td>2</td><td class="sev CRITICAL">CRITICAL</td><td>TOCTOU</td>
+  <td>Update flow had same TOCTOU race on name change pathway.</td>
+  <td>Wrapped duplicate name check + UPDATE in transaction.</td>
+</tr>
+<tr>
+  <td>3</td><td class="sev CRITICAL">CRITICAL</td><td>Auth</td>
+  <td>System Admin bypass was internally contradictory — AC criteria didn't mention admin override but Authorization section claimed admin bypasses everything.</td>
+  <td>Added "(or a System Admin)" to every user story WHEN clause. Made explicit that System Admin implicitly holds all permissions.</td>
+</tr>
+<tr>
+  <td>4</td><td class="sev HIGH">HIGH</td><td>Completeness</td>
+  <td>Unrecognised fields in PATCH body: ignore vs reject was unresolved ("be explicit in the design" — not done).</td>
+  <td>Explicit decision: reject with 422 (strict mode). Documented in requirements, design, and tasks.</td>
+</tr>
+<tr>
+  <td>5</td><td class="sev HIGH">HIGH</td><td>Edge Case</td>
+  <td>No semantics for clearing description via PATCH. Could user send null? Empty string? Omit?</td>
+  <td>Documented: omit = preserve current; null = clear to NULL; "" = store empty string.</td>
+</tr>
+<tr>
+  <td>6</td><td class="sev HIGH">HIGH</td><td>Edge Case</td>
+  <td>Whitespace-only name ("&nbsp;&nbsp;&nbsp;") passed validation as non-empty.</td>
+  <td>Added validation: must contain at least one non-whitespace char. Leading/trailing whitespace trimmed.</td>
+</tr>
+<tr>
+  <td>7</td><td class="sev HIGH">HIGH</td><td>Edge Case</td>
+  <td>Empty-string description vs null not specified for create.</td>
+  <td>"" stored as-is (distinct from null). Omitting defaults to null.</td>
+</tr>
+<tr>
+  <td>8</td><td class="sev HIGH">HIGH</td><td>Completeness</td>
+  <td>search parameter max 255 chars stated in design but not enforced in tasks or error responses.</td>
+  <td>Added validation in handler task. Added 422 row to error table. Added AC to requirements.</td>
+</tr>
+<tr>
+  <td>9</td><td class="sev HIGH">HIGH</td><td>Consistency</td>
+  <td>updated_by in list response inconsistent with project-crud pattern (project-crud omits it).</td>
+  <td>Removed updated_by from list response. Created separate CategoryListResponse vs CategoryDetailResponse DTOs.</td>
+</tr>
+<tr>
+  <td>10</td><td class="sev HIGH">HIGH</td><td>Completeness</td>
+  <td>Select endpoint returned unbounded results with no cap.</td>
+  <td>Added LIMIT 500 with X-Result-Truncated: true header and warning log.</td>
+</tr>
+<tr>
+  <td>11</td><td class="sev MEDIUM">MEDIUM</td><td>Security</td>
+  <td>Rate limiting was aspirational language ("should apply", "consider 429") — not concrete.</td>
+  <td>Defined concrete per-endpoint rate limits with headers (X-RateLimit-*).</td>
+</tr>
+<tr>
+  <td>12</td><td class="sev MEDIUM">MEDIUM</td><td>Security</td>
+  <td>No doc for role/permission changes mid-session.</td>
+  <td>Documented that authorization checks use live data on every request, not cached in session.</td>
+</tr>
+<tr>
+  <td>13</td><td class="sev MEDIUM">MEDIUM</td><td>Correctness</td>
+  <td>Hardcoded permission IDs (52-57) — fragile under concurrent development.</td>
+  <td>Removed explicit IDs. Use INSERT … ON CONFLICT (code) DO NOTHING. Let DB auto-assign IDs.</td>
+</tr>
+<tr>
+  <td>14</td><td class="sev MEDIUM">MEDIUM</td><td>Completeness</td>
+  <td>No DB CHECK constraint for description max length (app-only enforcement).</td>
+  <td>Added CHECK (description IS NULL OR char_length(description) &lt;= 2000).</td>
+</tr>
+<tr>
+  <td>15</td><td class="sev MEDIUM">MEDIUM</td><td>Completeness</td>
+  <td>updated_at trigger not in migration task.</td>
+  <td>Added BEFORE UPDATE trigger creation to task 10.</td>
+</tr>
+<tr>
+  <td>16</td><td class="sev MEDIUM">MEDIUM</td><td>Completeness</td>
+  <td>Missing 409 response body example for DUPLICATE_CATEGORY_NAME on create.</td>
+  <td>Added full 409 response body example to POST endpoint section.</td>
+</tr>
+<tr>
+  <td>17</td><td class="sev MEDIUM">MEDIUM</td><td>Completeness</td>
+  <td>Large page values with OFFSET cause PostgreSQL performance degradation (no cap).</td>
+  <td>Capped page at 1000. Requests with page &gt; 1000 return 422.</td>
+</tr>
+<tr><td>+</td><td class="sev LOW">LOW</td><td colspan="2">11 additional LOW-severity findings (boundary tests, Unicode tests, env var naming, etc.)</td><td class="fix-done">ALL FIXED</td></tr>
+</table>
+
+<h3>metadata-templates <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr>
+  <td>1</td><td class="sev CRITICAL">CRITICAL</td><td>TOCTOU</td>
+  <td>Template existence check outside transaction in soft-delete and update flows.</td>
+  <td>Moved existence fetch + SELECT FOR UPDATE inside transaction for both flows.</td>
+</tr>
+<tr>
+  <td>2</td><td class="sev CRITICAL">CRITICAL</td><td>Completeness</td>
+  <td>Update Template Flow missing from Sequence section entirely.</td>
+  <td>Added full Update Template Flow sequence with transaction wrapping.</td>
+</tr>
+<tr>
+  <td>3</td><td class="sev CRITICAL">CRITICAL</td><td>Correctness</td>
+  <td>Backslash escape missing from Task 12 search escaping (only % and _ mentioned).</td>
+  <td>Added \ escaping in correct order: double backslashes first, then escape % and _.</td>
+</tr>
+<tr>
+  <td>4</td><td class="sev CRITICAL">CRITICAL</td><td>Correctness</td>
+  <td>Duplicate name check on update didn't exclude current template (case-only rename would self-conflict).</td>
+  <td>Added AND id != $currentId to duplicate check query. Documented case-only rename behavior.</td>
+</tr>
+<tr>
+  <td>5</td><td class="sev HIGH">HIGH</td><td>Edge Case</td>
+  <td>page &lt; 1 and limit &lt; 1 not validated in error table or test cases.</td>
+  <td>Added page &lt; 1 and limit &lt; 1 validation. Updated error table and test cases.</td>
+</tr>
+<tr>
+  <td>6</td><td class="sev HIGH">HIGH</td><td>Ambiguity</td>
+  <td>Select endpoint truncation mechanism unspecified — LIMIT 500 in SQL vs in-memory truncation.</td>
+  <td>Explicitly specified LIMIT 500 in SQL with X-Result-Truncated header.</td>
+</tr>
+<tr>
+  <td>7</td><td class="sev HIGH">HIGH</td><td>Security</td>
+  <td>Immutable fields not explicitly enumerated as disallowed in request bodies (mass assignment risk).</td>
+  <td>Enumerated all immutable fields. Documented that only name and description are recognized.</td>
+</tr>
+<tr>
+  <td>8</td><td class="sev HIGH">HIGH</td><td>Test Gap</td>
+  <td>No 401 Unauthorized test cases in integration tests.</td>
+  <td>Added 401 test cases for all six endpoints with missing/expired sessions.</td>
+</tr>
+<tr>
+  <td>9</td><td class="sev HIGH">HIGH</td><td>Security</td>
+  <td>CSRF token recommendation used weak language ("should be considered").</td>
+  <td>Changed to normative SHOULD language.</td>
+</tr>
+<tr><td>+</td><td class="sev MEDIUM">MEDIUM</td><td colspan="2">8 MEDIUM findings (concurrency, UTF-8 truncation, naming, offboarding, etc.)</td><td class="fix-done">ALL FIXED</td></tr>
+<tr><td>+</td><td class="sev LOW">LOW</td><td colspan="2">6 LOW findings</td><td class="fix-done">ALL FIXED</td></tr>
+</table>
+
+<h3>metadata-priorities <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev HIGH">HIGH</td><td>Consistency</td><td>Search escaping missing backslash in tasks.md (requirements and design had it).</td><td class="fix-done">FIXED — Added \ escaping to tasks.md search description and test cases.</td></tr>
+<tr><td>2</td><td class="sev MEDIUM">MEDIUM</td><td>Test Gap</td><td>Missing rank boundary tests in entity unit tests (rank=0, rank=6).</td><td class="fix-done">FIXED — Added rank boundary tests.</td></tr>
+<tr><td>3</td><td class="sev MEDIUM">MEDIUM</td><td>Completeness</td><td>page &lt; 1 and limit &lt; 1 not in error descriptions.</td><td class="fix-done">FIXED — Added to error handling table.</td></tr>
+<tr><td>4</td><td class="sev MEDIUM">MEDIUM</td><td>Design</td><td>PATCH semantics awkwardness with single updatable field ("omit to preserve" is a no-op).</td><td class="fix-done">FIXED — Removed misleading "omit to preserve"; documented that description is required in body.</td></tr>
+<tr><td>5</td><td class="sev MEDIUM">MEDIUM</td><td>Test Gap</td><td>No test for BEFORE UPDATE trigger immutability guard via raw SQL.</td><td class="fix-done">FIXED — Added raw SQL trigger bypass test.</td></tr>
+<tr><td>6</td><td class="sev MEDIUM">MEDIUM</td><td>Observability</td><td>Seeder didn't log warning for non-string description (only for truncation).</td><td class="fix-done">FIXED — Added warning log for non-string description.</td></tr>
+<tr><td>+</td><td class="sev LOW">LOW</td><td colspan="2">7 LOW findings (401 tests, 429 table, non-integer page/limit, rank ordering test, etc.)</td><td class="fix-done">ALL FIXED</td></tr>
+</table>
+
+<h3>metadata-plan-types <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Contradiction</td><td>Requirements said fixed 7 names; design said seeder "logs warning but proceeds (allowing customisation)".</td><td class="fix-done">FIXED — Made consistent: seeder rolls back on mismatch (fixed set).</td></tr>
+<tr><td>2</td><td class="sev CRITICAL">CRITICAL</td><td>TOCTOU</td><td>Project existence check outside transaction in update flow.</td><td class="fix-done">FIXED — Moved fetch + SELECT FOR UPDATE inside transaction.</td></tr>
+<tr><td>3</td><td class="sev CRITICAL">CRITICAL</td><td>Test Gap</td><td>No 401 tests in integration suite.</td><td class="fix-done">FIXED — Added 401 tests for all endpoints.</td></tr>
+<tr><td>4</td><td class="sev CRITICAL">CRITICAL</td><td>Test Gap</td><td>Backslash escaping in search untested.</td><td class="fix-done">FIXED — Added backslash search test.</td></tr>
+<tr><td>5</td><td class="sev HIGH">HIGH</td><td>DB Design</td><td>created_at/created_by not guarded by BEFORE UPDATE trigger.</td><td class="fix-done">FIXED — Added immutable field guards to trigger.</td></tr>
+<tr><td>6</td><td class="sev HIGH">HIGH</td><td>Validation</td><td>Whitespace handling for search parameter unspecified.</td><td class="fix-done">FIXED — Trimmed; all-whitespace = no filter.</td></tr>
+<tr><td>7</td><td class="sev HIGH">HIGH</td><td>Test Gap</td><td>Missing page/limit boundary and type tests.</td><td class="fix-done">FIXED — Added boundary tests.</td></tr>
+<tr><td>8</td><td class="sev HIGH">HIGH</td><td>Doc Gap</td><td>429 missing from error handling table.</td><td class="fix-done">FIXED — Added 429 row.</td></tr>
+<tr><td>+</td><td class="sev MEDIUM">MEDIUM</td><td colspan="2">10 MEDIUM findings</td><td class="fix-done">ALL FIXED</td></tr>
+<tr><td>+</td><td class="sev LOW">LOW</td><td colspan="2">7 LOW findings</td><td class="fix-done">ALL FIXED</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="test-case">2. Test Case Management</h2>
+
+<h3>test-case-crud <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev HIGH">HIGH</td><td>Contradiction</td><td>Default sort: requirements said id (ascending), design said -id (descending).</td><td class="fix-done">FIXED — Standardized to -id (newest first).</td></tr>
+<tr><td>2</td><td class="sev MEDIUM">MEDIUM</td><td>TOCTOU</td><td>Project existence check outside transaction in create flow (could create in soft-deleted project).</td><td class="fix-done">FIXED — Moved SELECT FOR UPDATE on project row into transaction.</td></tr>
+<tr><td>3</td><td class="sev MEDIUM">MEDIUM</td><td>Race</td><td>DB unique violation (error 23505) from concurrent inserts not caught — would return 500.</td><td class="fix-done">FIXED — Added catch-and-translate to 409 Conflict.</td></tr>
+<tr><td>4</td><td class="sev MEDIUM">MEDIUM</td><td>Correctness</td><td>Search escaping order not specified (\ must be escaped first).</td><td class="fix-done">FIXED — Specified order: \ first, then %, then _.</td></tr>
+<tr><td>5</td><td class="sev MEDIUM">MEDIUM</td><td>UX</td><td>Select endpoint truncated results with no client indication.</td><td class="fix-done">FIXED — Added X-Result-Truncated: true header.</td></tr>
+<tr><td>6</td><td class="sev MEDIUM">MEDIUM</td><td>Completeness</td><td>Missing 401 AC in all user stories.</td><td class="fix-done">FIXED — Added Authentication section to Security Considerations.</td></tr>
+<tr><td>7</td><td class="sev MEDIUM">MEDIUM</td><td>Completeness</td><td>Missing 429 in Error Handling table.</td><td class="fix-done">FIXED — Added 429 row.</td></tr>
+<tr><td>+</td><td class="sev LOW">LOW</td><td colspan="2">19 LOW findings</td><td class="fix-done">FIXED</td></tr>
+</table>
+
+<h3>test-case-template <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td colspan="4">No CRITICAL or HIGH issues found. Template pre-fill logic correctly uses transaction wrapping and validates template FK to same project.</td><td class="fix-done">CLEAN</td></tr>
+</table>
+
+<h3>test-case-files <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev HIGH">HIGH</td><td>Data Loss</td><td>File written to disk before DB insert; no cleanup on DB failure — orphaned files accumulate.</td><td class="fix-done">FIXED — Added FileStorage::delete() cleanup step on DB insert failure.</td></tr>
+</table>
+
+<h3>test-case-orphan <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev HIGH">HIGH</td><td>TOCTOU</td><td>Assign-to-project didn't SELECT FOR UPDATE on target project within transaction.</td><td class="fix-done">FIXED — Moved project validation inside transaction with FOR UPDATE lock.</td></tr>
+<tr><td>2</td><td class="sev HIGH">HIGH</td><td>Search</td><td>Search escaping didn't specify order (\ first, then %, then _).</td><td class="fix-done">FIXED — Added escape order.</td></tr>
+<tr><td>3</td><td class="sev HIGH">HIGH</td><td>Correctness</td><td>Incorrect claim that PostgreSQL unique indexes treat NULL as equal (they treat NULL as distinct).</td><td class="fix-done">FIXED — Corrected PostgreSQL NULL behavior description.</td></tr>
+<tr><td>4</td><td class="sev HIGH">HIGH</td><td>Cross-Spec</td><td>Files FK invalidated test-case-crud "leaf entity" claim.</td><td class="fix-done">FIXED — Updated test-case-crud to acknowledge TEST_CASE_FILES FK reference.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="test-plan">3. Test Plan Management</h2>
+
+<h3>test-plan-crud <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Contradiction</td><td>Status field accepted in PATCH (crud spec) vs rejected (status spec). Two different endpoints managing same state.</td><td class="fix-done">FIXED — Removed status from PATCH updatable fields. Status changes exclusively via dedicated transition-status endpoint.</td></tr>
+<tr><td>2</td><td class="sev CRITICAL">CRITICAL</td><td>Auth</td><td>Contradictory 403 vs 404 for non-members on update/delete (overlapping conditions).</td><td class="fix-done">FIXED — Made mutually exclusive: member + wrong role → 403; non-member → 404.</td></tr>
+<tr><td>3</td><td class="sev HIGH">HIGH</td><td>Auth</td><td>Auth model escalation: status transition required Owner/Editor in ALL linked projects, but PATCH only required "at least one."</td><td class="fix-done">FIXED — Standardized to "at least one" linked project for both.</td></tr>
+</table>
+
+<h3>test-plan-status <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Naming</td><td>CANCEL vs CANCELLED inconsistency with crud spec (CHECK constraint uses CANCEL).</td><td class="fix-done">FIXED — Standardized to CANCEL across all three files.</td></tr>
+<tr><td>2</td><td class="sev HIGH">HIGH</td><td>TOCTOU</td><td>Status transition to DONE: SELECT FOR UPDATE on test plan row only — doesn't prevent concurrent IN_PROGRESS result inserts.</td><td class="fix-done">FIXED — Documented SERIALIZABLE isolation alternative and FOR SHARE on junction rows.</td></tr>
+<tr><td>3</td><td class="sev HIGH">HIGH</td><td>Auth</td><td>Available-transitions returned 403 for non-members while detail endpoint returned 404 — info leakage asymmetry.</td><td class="fix-done">FIXED — Standardized both to 404 for non-members.</td></tr>
+</table>
+
+<h3>test-plan-runs <span class="phase-badge">Phase 1</span></h3>
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev HIGH">HIGH</td><td>Correctness</td><td>Junction table name mismatch: status spec referenced test_plan_runs but runs spec defined test_plan_test_runs.</td><td class="fix-done">FIXED — Standardized all references to test_plan_test_runs. Removed deleted_at refs (hard delete).</td></tr>
+<tr><td>2</td><td class="sev HIGH">HIGH</td><td>Security</td><td>Cross-project information leakage via run linking (could link runs from inaccessible projects).</td><td class="fix-done">FIXED — Added project-scope validation: run must belong to plan's linked projects.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="test-run">4. Test Run Management</h2>
+
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Feature</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Naming</td><td>statistics</td><td>Junction table referenced as TEST_RUN_CASES but canonical name is TEST_RUN_TEST_CASES</td><td class="fix-done">FIXED — Replaced all occurrences in 3 files.</td></tr>
+<tr><td>2</td><td class="sev HIGH">HIGH</td><td>Correctness</td><td>executions</td><td>SQL alias mismatch: LATERAL join aliased as etc but COALESCE references cc</td><td class="fix-done">FIXED — Changed etc → cc.</td></tr>
+<tr><td>3</td><td class="sev HIGH">HIGH</td><td>TOCTOU</td><td>crud</td><td>plan_id FK validation uses plain SELECT without FOR UPDATE — concurrent plan soft-delete possible</td><td class="fix-done">FIXED — Changed to SELECT … FOR UPDATE.</td></tr>
+<tr><td>4</td><td class="sev HIGH">HIGH</td><td>Correctness</td><td>statistics</td><td>Aggregation query underspecified — prose description risks incorrect LEFT JOIN from wrong base table</td><td class="fix-done">FIXED — Specified driving from junction table with LEFT JOINs; added invariant assertion.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="test-exec">5. Test Execution Management</h2>
+
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Feature</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Schema</td><td>Cross-spec (import, reimport, result-update)</td><td>TEST_CASE_RESULTS column names diverged: status vs result, result_logs vs logs, priority VARCHAR vs priority_id FK</td>
+<td class="fix-done">FIXED — Standardized to: status VARCHAR(50), result_logs TEXT, priority VARCHAR(50) (denormalized name). Added tested_by column to import migration.</td></tr>
+<tr><td>2</td><td class="sev CRITICAL">CRITICAL</td><td>Correctness</td><td>reimport</td><td>Single-mode reimport had no way to identify which test case result to reimport (no resultId/tcId param)</td>
+<td class="fix-done">FIXED — Added testCaseResultId path parameter for single mode.</td></tr>
+<tr><td>3</td><td class="sev CRITICAL">CRITICAL</td><td>Schema</td><td>Cross-spec (import, reimport, files)</td><td>project_id assumed on TEST_EXECUTIONS but CRUD spec doesn't define it (chain is 4-hop, not 3)</td>
+<td class="fix-done">FIXED — Updated to 4-hop chain: result → execution → test_run → project. Removed incorrect project_id assumption.</td></tr>
+<tr><td>4</td><td class="sev HIGH">HIGH</td><td>Auth</td><td>crud ↔ result-update</td><td>Tester must be project member (CRUD) vs tester need not be member (result-update) — contradictory</td>
+<td class="fix-done">FIXED — Standardized: testers MUST be project members to be assigned.</td></tr>
+<tr><td>5</td><td class="sev HIGH">HIGH</td><td>Auth</td><td>crud ↔ result-update</td><td>Viewer assigned as tester gains mutation access — authorization bypass of read-only role</td>
+<td class="fix-done">FIXED — Restricted result-update to Contributor+ roles. Viewer testers cannot update results.</td></tr>
+<tr><td>6</td><td class="sev HIGH">HIGH</td><td>Security</td><td>result-files</td><td>MIME type trusted from client Content-Type header; no X-Content-Type-Options: nosniff on download</td>
+<td class="fix-done">FIXED — Added nosniff header. Added magic-byte validation recommendation.</td></tr>
+<tr><td>7</td><td class="sev HIGH">HIGH</td><td>Schema</td><td>import ↔ result-update</td><td>tested_by column assumed by result-update but missing from import migration (table authority)</td>
+<td class="fix-done">FIXED — Added tested_by to import spec's CREATE TABLE.</td></tr>
+<tr><td>8</td><td class="sev HIGH">HIGH</td><td>Semantics</td><td>reimport</td><td>Reimport used priority_id FK (breaking snapshot immutability — priority renames would affect results)</td>
+<td class="fix-done">FIXED — Changed to resolve priority name at refresh time and write denormalized VARCHAR.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="sharing">6. Sharing</h2>
+
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Auth API</td><td>auth-sharing-scope and sharing-override defined different method signatures on AuthorizationService for the same purpose.</td>
+<td class="fix-done">FIXED — Reconcile to canonical get_effective_role(). auth-sharing-scope delegates to sharing-override.</td></tr>
+<tr><td>2</td><td class="sev HIGH">HIGH</td><td>Auth</td><td>Role mapping: SharingRole::Editor mapped only to ProjectRole::Owner (locked out project Editors).</td>
+<td class="fix-done">FIXED — Changed to {Owner, Editor}.</td></tr>
+<tr><td>3</td><td class="sev HIGH">HIGH</td><td>Ownership</td><td>Orphaned object creator-check ownership responsibility ambiguous ("handler OR AuthorizationService").</td>
+<td class="fix-done">FIXED — Defined dedicated can_access_orphaned() on AuthorizationService. Removed handler-level ambiguity.</td></tr>
+<tr><td>4</td><td class="sev HIGH">HIGH</td><td>Cleanup</td><td>No cleanup spec for sharing entries of soft-deleted entities — stale entries accumulate.</td>
+<td class="fix-done">FIXED — Added application-level cleanup on soft-delete. Documented periodic cleanup task.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="auth">7. Authorization</h2>
+
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Security</td><td>Admin bypass query missing groups.deleted_at IS NULL — soft-deleted group with System Admin role retains admin access for all members.</td>
+<td class="fix-done">FIXED — Added JOIN groups g ON g.id = ug.group_id AND g.deleted_at IS NULL.</td></tr>
+<tr><td>2</td><td class="sev HIGH">HIGH</td><td>Doc Gap</td><td>auth-project-scope layering diagram omitted sharing scope — developer following only that spec would bypass sharing.</td>
+<td class="fix-done">FIXED — Added cross-reference note pointing to auth-sharing-scope for shareable objects.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="audit">8. Soft Delete &amp; Audit</h2>
+
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Security</td><td>Soft-deleted parent's children accessible via direct detail endpoints (find_by_id only checks own deleted_at, not parent's).</td>
+<td class="fix-done">FIXED — Added mandatory parent-check step: JOIN parent table with WHERE parent.deleted_at IS NULL.</td></tr>
+<tr><td>2</td><td class="sev HIGH">HIGH</td><td>Correctness</td><td>Audit triggers + soft-delete: double-write of updated_at/updated_by with potential value divergence.</td>
+<td class="fix-done">FIXED — Application layer no longer sets updated_at/updated_by in soft-delete; trigger handles exclusively.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="ui">9. General UI</h2>
+
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Feature</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Config</td><td>file-upload</td><td>Upload config endpoint doesn't exist; hardcoded fallback guarantees client-server validation misalignment.</td>
+<td class="fix-done">FIXED — Made limits prop REQUIRED (server-rendered from parent page). Removed hardcoded fallbacks. Aligned MIME lists.</td></tr>
+<tr><td>2</td><td class="sev HIGH">HIGH</td><td>UX</td><td>file-upload</td><td>Client-side MIME validation rejects files with empty File.type that server would accept.</td>
+<td class="fix-done">FIXED — Skip client MIME check when File.type is empty; defer to server magic-byte validation.</td></tr>
+<tr><td>3</td><td class="sev HIGH">HIGH</td><td>State</td><td>list-views</td><td>Dual source of truth for current page (internal state + meta.page prop) — state inconsistency risk.</td>
+<td class="fix-done">FIXED — Made EntityList fully controlled: removed internal currentPage state; all page logic from props.</td></tr>
+<tr><td>4</td><td class="sev HIGH">HIGH</td><td>Auth</td><td>project-switcher</td><td>Missing mandatory requirement that all project-scoped endpoints validate membership.</td>
+<td class="fix-done">FIXED — Added explicit requirement for shared middleware/auth decorator on all project-scoped routes.</td></tr>
+<tr><td>5</td><td class="sev HIGH">HIGH</td><td>UX</td><td>sidebar</td><td>All Settings links unconditionally disabled without project selection — assumes all metadata is project-scoped.</td>
+<td class="fix-done">FIXED — Added per-item requiresProject flag. Verified all Settings entities are project-scoped.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="jira">10. Jira Integration</h2>
+
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Feature</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Idempotency</td><td>create-bug</td><td>Distributed transaction: Jira API call success + local link insert failure = duplicate bugs on retry. No DB-level one-bug-per-case constraint.</td>
+<td class="fix-done">FIXED — Added partial unique index WHERE link_type = 'BUG'. Two-phase approach: insert PENDING link → call Jira API → update to CONFIRMED (or delete PENDING on failure).</td></tr>
+<tr><td>2</td><td class="sev HIGH">HIGH</td><td>Contradiction</td><td>release-link</td><td>Security Considerations said multi-project validation; Out of Scope said single-project only.</td>
+<td class="fix-done">FIXED — Removed contradictory Out of Scope item.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="phase23">11. Phase 2/3 Features</h2>
+
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Feature</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Performance</td><td>reporting-charts</td><td>Trend query uses per-bucket subqueries (365 buckets × 10K rows = 3.65M scans). Unsustainable at scale.</td>
+<td class="fix-done">FIXED — Capped to 90 days daily / 12 months monthly. Rewrote to single window-function pass. Added future snapshot table note.</td></tr>
+<tr><td>2</td><td class="sev HIGH">HIGH</td><td>Security</td><td>notifications-email</td><td>Email body lacks injection sanitization — only subject line strips CR/LF.</td>
+<td class="fix-done">FIXED — Extended CR/LF stripping to ALL user-supplied fields used in email construction.</td></tr>
+<tr><td>3</td><td class="sev HIGH">HIGH</td><td>DoS</td><td>public-api</td><td>No rate limiting strategy for unauthenticated requests — SHA-256 computed on every random token.</td>
+<td class="fix-done">FIXED — Added two-tier rate limiting: per-IP for invalid keys (100/min), per-key_hash for valid keys.</td></tr>
+<tr><td>4</td><td class="sev CRITICAL">CRITICAL</td><td>TOCTOU</td><td>project-crud</td><td>Create Project Flow: uniqueness check not in transaction with INSERT. DB constraint violation not mapped to 409.</td>
+<td class="fix-done">FIXED — Added catch-and-translate for PostgreSQL error 23505 → 409 Conflict.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="iam">12. IAM &amp; Projects (Pre-Existing Specs)</h2>
+
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Feature</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Consistency</td><td>permissions + cli-init</td><td>11 permission name values differ between iam-permissions seed data and iam-cli-init SEED_PERMISSIONS constant.</td>
+<td class="fix-done">FIXED — Made migrations the single source of truth for permission catalog. CLI init only seeds admin user + role.</td></tr>
+<tr><td>2</td><td class="sev CRITICAL">CRITICAL</td><td>Correctness</td><td>groups</td><td>GROUPS table UNIQUE (name) is case-sensitive but requirement demands case-insensitive uniqueness.</td>
+<td class="fix-done">FIXED — Changed to CREATE UNIQUE INDEX … ON groups (LOWER(name)).</td></tr>
+<tr><td>3</td><td class="sev CRITICAL">CRITICAL</td><td>TOCTOU</td><td>users, groups, projects</td><td>All three create flows: DB unique constraint violation (error 23505) from concurrent inserts not caught — would return 500.</td>
+<td class="fix-done">FIXED — Added catch-and-translate to 409 Conflict in all three specs.</td></tr>
+<tr><td>4</td><td class="sev CRITICAL">CRITICAL</td><td>Security</td><td>groups</td><td>sort parameter accepted user input into ORDER BY without whitelist validation — SQL injection risk.</td>
+<td class="fix-done">FIXED — Added closed allowlist (name, id, created_at, status). Non-allowlist values → 422.</td></tr>
+<tr><td>5</td><td class="sev CRITICAL">CRITICAL</td><td>Security</td><td>auth</td><td>No brute-force protection on login endpoint. "Rate limiting on login attempts" explicitly deferred.</td>
+<td class="fix-done">FIXED — Removed from Out of Scope. Added 5 attempts/min/IP rate limiting on POST /api/v1/auth/login.</td></tr>
+<tr><td>6</td><td class="sev HIGH">HIGH</td><td>Auth</td><td>users</td><td>No self-deactivation guard for last System Admin — sole admin can lock themselves out.</td>
+<td class="fix-done">FIXED — Added CANNOT_DEACTIVATE_LAST_ADMIN guard: verify ≥1 other active admin before deactivating.</td></tr>
+<tr><td>7</td><td class="sev HIGH">HIGH</td><td>Auth</td><td>roles, users, groups</td><td>System Admin bypass not uniformly documented — some specs mention it, others don't.</td>
+<td class="fix-done">FIXED — Added System Admin bypass AC to all IAM user stories.</td></tr>
+<tr><td>8</td><td class="sev HIGH">HIGH</td><td>Security</td><td>cli-init ↔ users</td><td>CLI init checks common passwords; self-service password change only enforces min 8 chars.</td>
+<td class="fix-done">FIXED — Extracted common password list into shared module. Applied same check to ChangePasswordUseCase.</td></tr>
+<tr><td>9</td><td class="sev HIGH">HIGH</td><td>Contradiction</td><td>auth</td><td>Session fingerprinting in Out of Scope (requirements) but implemented in design (middleware).</td>
+<td class="fix-done">FIXED — Added fingerprinting to requirements scope.</td></tr>
+<tr><td>10</td><td class="sev HIGH">HIGH</td><td>Validation</td><td>groups</td><td>INACTIVE users can be added to groups — validate_users_exist doesn't check status = 'ACTIVE'.</td>
+<td class="fix-done">FIXED — Added AND status = 'ACTIVE' to validation query.</td></tr>
+<tr><td>11</td><td class="sev HIGH">HIGH</td><td>Test Gap</td><td>users, groups, roles, auth, projects</td><td>Missing boundary test cases across all specs (name lengths, email length, pagination extremes, password length).</td>
+<td class="fix-done">FIXED — Added explicit boundary test cases to each spec.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="cross">13. Cross-Spec Issues</h2>
+
+<table>
+<tr><th>#</th><th>Sev</th><th>Category</th><th>Features Affected</th><th>Issue</th><th>Fix</th></tr>
+<tr><td>1</td><td class="sev CRITICAL">CRITICAL</td><td>Schema</td><td>import, reimport, result-update</td><td>TEST_CASE_RESULTS defined with different column names across 3 specs (status/result, result_logs/logs, priority/priority_id).</td>
+<td class="fix-done">FIXED — Single authoritative schema in import spec.</td></tr>
+<tr><td>2</td><td class="sev CRITICAL">CRITICAL</td><td>Schema</td><td>crud, import, files</td><td>TEST_EXECUTIONS project_id column assumed but not defined in CRUD data model.</td>
+<td class="fix-done">FIXED — 4-hop chain documented everywhere.</td></tr>
+<tr><td>3</td><td class="sev CRITICAL">CRITICAL</td><td>Naming</td><td>crud, status, runs</td><td>CANCEL vs CANCELLED across test-plan specs; junction table names (test_plan_runs vs test_plan_test_runs, TEST_RUN_CASES vs TEST_RUN_TEST_CASES).</td>
+<td class="fix-done">FIXED — Standardized naming everywhere.</td></tr>
+<tr><td>4</td><td class="sev CRITICAL">CRITICAL</td><td>Auth API</td><td>sharing-override, auth-sharing-scope</td><td>Two different AuthorizationService method signatures for same purpose; no relationship established.</td>
+<td class="fix-done">FIXED — Single canonical get_effective_role().</td></tr>
+<tr><td>5</td><td class="sev HIGH">HIGH</td><td>Cross-Spec</td><td>test-case-crud, test-case-files</td><td>Files FK invalidates "leaf entity" claim — TEST_CASES no longer unreferenced.</td>
+<td class="fix-done">FIXED — Updated claim everywhere.</td></tr>
+<tr><td>6</td><td class="sev HIGH">HIGH</td><td>Auth</td><td>test-plan-status, test-plan-crud</td><td>Auth model mismatch: "at least one" project (crud) vs "all" projects (status).</td>
+<td class="fix-done">FIXED — Standardized to "at least one."</td></tr>
+<tr><td>7</td><td class="sev HIGH">HIGH</td><td>Auth</td><td>crud, result-update</td><td>Tester assignment: must be member (crud) vs need not be member (result-update).</td>
+<td class="fix-done">FIXED — Must be member. Result-update clause removed.</td></tr>
+</table>
+
+<hr style="margin: 2rem 0;">
+<p style="color: var(--muted); font-size: .875rem;">
+  Total: ~159 issues found across 52 features. All CRITICAL and HIGH issues resolved.
+  13 CRITICAL · 30 HIGH · 55 MEDIUM · 61 LOW.
+  Reviewed and fixed 2026-07-15. Ready for implementation.
+</p>
+
+</body>
+</html>

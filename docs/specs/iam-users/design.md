@@ -511,7 +511,10 @@ enum UserStatus {
    - `deleted_by`: `None`, `deleted_at`: `None`
 9. Use case calls `UserRepository::create(user)` to insert the row.
 10. Repository returns the created user with the DB-assigned `id`.
-11. Handler returns `201 Created` with `Location` header and the user payload (no `password_hash`).
+11. If the INSERT fails with a PostgreSQL duplicate key violation (error 23505), catch it and
+    return 409 Conflict — the DB unique constraint is the safety net against TOCTOU races
+    between the find-by-name/find-by-email checks and the INSERT.
+12. Handler returns `201 Created` with `Location` header and the user payload (no `password_hash`).
 
 ### Self Profile Update / Password Change Flow
 
@@ -601,8 +604,8 @@ enum UserStatus {
 | User deactivated (session exists) | `403` | `USER_INACTIVE` | WARN | From auth middleware |
 | Missing required permission | `403` | `FORBIDDEN` | INFO | Specific permission code (e.g., `user:create`) |
 | User not found (or soft-deleted) | `404` | `NOT_FOUND` | INFO | Same message for non-existent and deleted |
-| Duplicate username (create/update) | `409` | `DUPLICATE_USERNAME` | INFO | Case-insensitive comparison |
-| Duplicate email (create/update) | `409` | `DUPLICATE_EMAIL` | INFO | Case-insensitive comparison |
+| Duplicate username (create/update) | `409` | `DUPLICATE_USERNAME` | INFO | Case-insensitive comparison. Also caught from DB unique constraint violation (error 23505) as TOCTOU safety net. |
+| Duplicate email (create/update) | `409` | `DUPLICATE_EMAIL` | INFO | Case-insensitive comparison. Also caught from DB unique constraint violation (error 23505) as TOCTOU safety net. |
 | Update on soft-deleted row | `409` | `RESOURCE_DELETED` | WARN | Application-layer rejection per FR-54c |
 | Validation error (missing/invalid fields) | `422` | `VALIDATION_ERROR` | INFO | Field-level details in the response |
 | Redis unreachable | `503` | `SESSION_STORE_UNAVAILABLE` | ERROR | From auth middleware |

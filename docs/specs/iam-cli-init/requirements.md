@@ -2,10 +2,13 @@
 
 ## Overview
 
-Provide a CLI bootstrap command (`tcms init`) that seeds the initial permission catalog, creates
-the built-in "System Admin" role with all permissions, and creates the first System Admin user.
-This is the entry point for any fresh deployment — the system cannot be used until initialization
-has completed.
+Provide a CLI bootstrap command (`tcms init`) that creates the built-in "System Admin" role
+assignment and the first System Admin user. This is the entry point for any fresh deployment —
+the system cannot be used until initialization has completed.
+
+The permission catalog is seeded by database migrations only. CLI init does NOT re-seed
+permissions. It assumes permissions already exist from migrations and only creates the role
+assignment and admin user.
 
 ## User Stories
 
@@ -17,10 +20,10 @@ system.
 
 **Acceptance Criteria (EARS)**
 
-- WHEN the `tcms init` command is run against an empty database, THE SYSTEM SHALL seed the
-  full permission catalog, create the "System Admin" role with all permissions, prompt or accept
-  credentials for the first admin user, create that user with the System Admin role, and exit with
-  a `0` exit code and a success message.
+- WHEN the `tcms init` command is run against a migrated database, THE SYSTEM SHALL create the
+  "System Admin" role with all existing permissions (permissions are already seeded by migrations),
+  prompt or accept credentials for the first admin user, create that user with the System Admin
+  role, and exit with a `0` exit code and a success message.
 - WHEN the admin user is created, THE SYSTEM SHALL set the user's `created_by` and `updated_by`
   columns to `NULL` — the bootstrap admin has no creator (per PRD SS6.4).
 - WHEN the admin user is created, THE SYSTEM SHALL hash the password using PBKDF2 (the same
@@ -39,14 +42,12 @@ duplicate data, so that automated deployment scripts can safely call it multiple
 
 **Acceptance Criteria (EARS)**
 
-- WHEN `tcms init` is run a second time AND all seed data (permissions, System Admin role) and
-  at least one System Admin user already exist, THE SYSTEM SHALL exit with a `0` exit code and
-  output a message indicating that the system is already initialized — no changes made.
-- WHEN `tcms init` is run again AND the permission catalog is missing new permissions that were
-  added in a later deployment, THE SYSTEM SHALL insert only the new permissions and grant them
-  to the System Admin role — no duplicate entries and no removal of existing permissions.
+- WHEN `tcms init` is run a second time AND the System Admin role assignment and at least one
+  System Admin user already exist, THE SYSTEM SHALL exit with a `0` exit code and output a
+  message indicating that the system is already initialized — no changes made.
 - WHEN `tcms init` is run again AND the System Admin role exists but has been modified (e.g.,
-  some permissions removed), THE SYSTEM SHALL restore all permissions to the System Admin role.
+  some permissions removed), THE SYSTEM SHALL restore all existing permissions (from the
+  migration-seeded catalog) to the System Admin role.
 
 ### US-03: Input Validation
 

@@ -113,7 +113,12 @@ control session lifetime and cookie security settings per deployment environment
 - Session list or session management UI (admin cannot view/revoke active sessions).
 - Audit logging of login/logout events (deferred to a cross-cutting audit feature).
 - Session fingerprinting (IP, User-Agent) — sessions are validated by session ID only.
-- Rate limiting on login attempts (deferred to a cross-cutting rate-limiting feature).
+## Security Considerations
+
+- **Rate limiting on `POST /api/v1/auth/login`:** 5 attempts per minute per IP address.
+  Returns `429 Too Many Requests` with a `Retry-After` header. The rate limit counter is
+  scoped to IP address and resets after the window elapses. This protects against brute-force
+  credential guessing.
 
 ## Dependencies
 

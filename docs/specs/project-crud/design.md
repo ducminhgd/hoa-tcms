@@ -433,7 +433,10 @@ Hard delete only — no `deleted_at` / `deleted_by`. Members are removed by `DEL
     a. `ProjectRepository::find_by_name(name)` checks for duplicates
        (case-insensitive lookup, inside the transaction to avoid TOCTOU race).
     b. If duplicate found, return `DuplicateProjectName` error and roll back.
-    c. `ProjectRepository::save(project)` inserts the project row.
+    c. `ProjectRepository::save(project)` inserts the project row. If the INSERT fails
+       with a PostgreSQL duplicate key violation (error 23505), catch it and return
+       `409 Conflict` — the DB unique constraint is the safety net against TOCTOU
+       races between the find-by-name check (step 8a) and the INSERT.
     d. `ProjectRepository::add_member(project_id, user_id, role)` inserts the Owner
        membership row.
     e. `MetadataSeeder::seed(project_id, config)` copies defaults from the YAML config
@@ -494,7 +497,7 @@ Hard delete only — no `deleted_at` / `deleted_by`. Members are removed by `DEL
 | Missing or invalid session | `401` | `NOT_AUTHENTICATED` | INFO | From AuthMiddleware |
 | User lacks required system permission | `403` | `FORBIDDEN` | INFO | Generic message; do not reveal what permission is missing |
 | Project not found or soft-deleted | `404` | `NOT_FOUND` | INFO | Same message regardless of cause |
-| Duplicate project name | `409` | `DUPLICATE_PROJECT_NAME` | INFO | Case-insensitive comparison |
+| Duplicate project name | `409` | `DUPLICATE_PROJECT_NAME` | INFO | Case-insensitive comparison. Also caught from DB unique constraint violation (error 23505) as TOCTOU safety net. |
 | Validation error (bad request body) | `422` | `VALIDATION_ERROR` | INFO | Includes field-level details |
 | YAML config unreadable or malformed | `500` | `INTERNAL_ERROR` | ERROR | Transaction rolled back; project not created |
 | Database connection failure | `503` | `DATABASE_UNAVAILABLE` | ERROR | All project operations fail |

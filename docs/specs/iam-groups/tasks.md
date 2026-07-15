@@ -178,8 +178,9 @@
 - [ ] 15. **Implement `ListGroupsHandler` (GET /api/v1/groups)** — design.md#api-contract, requirements.md#US-01
        - Extract query parameters: `page` (default 1), `limit` (default 25, max 100),
          `sort` (default "name"), `order` (default "asc"), `status` (optional).
-       - Validate parameters: reject invalid `sort` fields, invalid `order`, out-of-range
-         `page`/`limit`, invalid `status` value.
+       - Validate parameters: reject invalid `sort` fields (must be in the closed allowlist:
+         `name`, `id`, `created_at`, `status` — any value not in this list returns `422`),
+         invalid `order`, out-of-range `page`/`limit`, invalid `status` value.
        - Call `GroupService::list_groups()`.
        - Return `200 OK` with `PaginatedResponse<GroupListItem>`.
        - On validation error: return `422`.

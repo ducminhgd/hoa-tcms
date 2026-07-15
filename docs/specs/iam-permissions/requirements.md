@@ -9,6 +9,10 @@ checks whether a user holds the required permission code for each request. Becau
 is seeded at database migration time, it is never created, updated, or deleted through the
 application UI/API; new permissions are added only via future migrations.
 
+**Important:** The database migration is the **single source of truth** for the permission
+catalog. CLI init does NOT re-seed permissions; it only creates the System Admin role
+assignment and the first admin user.
+
 ## User Stories
 
 ### US-1: Browse the permission catalog

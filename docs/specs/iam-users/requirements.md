@@ -221,6 +221,9 @@ I can grant or revoke system access without deleting data or removing role membe
   THE SYSTEM SHALL return `422 Unprocessable Entity` with a validation error.
 - WHILE a user is INACTIVE, any existing valid session SHALL be rejected by the
   auth middleware with `403 Forbidden` (enforced by `iam-auth` feature).
+- IF the target user holds the System Admin role AND deactivating them would leave zero
+  active System Admin users, THE SYSTEM SHALL return `422 Unprocessable Entity` with error
+  code `CANNOT_DEACTIVATE_LAST_ADMIN`.
 
 ## Out of Scope
 

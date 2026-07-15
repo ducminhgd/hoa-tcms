@@ -114,6 +114,11 @@ List groups with pagination and optional status filtering.
 | `403 Forbidden` | `FORBIDDEN` | Missing `group:read_list` permission |
 | `422 Unprocessable Entity` | `VALIDATION_ERROR` | Invalid `page`, `limit`, `sort`, `order`, or `status` parameter |
 
+The `sort` parameter must be validated against a **closed allowlist** of column names
+(`name`, `id`, `created_at`, `status`). Any value not in the allowlist returns
+`422 VALIDATION_ERROR`. This prevents SQL injection through dynamic sort column interpolation — the
+sort column must never be concatenated into a query string directly.
+
 ---
 
 ### POST `/api/v1/groups`
@@ -400,9 +405,9 @@ CREATE TABLE groups (
     updated_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     deleted_by  BIGINT          REFERENCES users(id),
     deleted_at  TIMESTAMPTZ,
-    CONSTRAINT uq_groups_name UNIQUE (name)
 );
 
+CREATE UNIQUE INDEX uq_groups_name_lower ON groups (LOWER(name));
 CREATE INDEX idx_groups_status ON groups(status) WHERE deleted_at IS NULL;
 CREATE INDEX idx_groups_deleted_at ON groups(deleted_at);
 ```
@@ -484,7 +489,10 @@ load the user's effective permission set on each authenticated request.
 7. If name exists, return `DuplicateName` error (→ handler returns `409 Conflict`).
 8. `GroupService` creates a `Group` entity and calls `GroupRepository::save(group)`.
 9. `GroupRepository` inserts into the `groups` table with `RETURNING id, created_at`.
-10. Handler maps the saved `Group` to the response DTO and returns `201 Created`
+10. If the INSERT fails with a PostgreSQL duplicate key violation (error 23505), catch it
+    and return `409 Conflict` — the DB unique constraint is the safety net against TOCTOU
+    races between the find-by-name check (step 6) and the INSERT (step 9).
+11. Handler maps the saved `Group` to the response DTO and returns `201 Created`
     with `Location` header.
 
 ### Update Group Flow
@@ -576,7 +584,7 @@ load the user's effective permission set on each authenticated request.
 | Missing or invalid session | `401` | `NOT_AUTHENTICATED` | INFO | From auth middleware |
 | Missing required permission | `403` | `FORBIDDEN` | INFO | From authorization middleware |
 | Group not found / soft-deleted | `404` | `NOT_FOUND` | INFO | Detail or update on non-existent/soft-deleted group |
-| Group name duplicate | `409` | `DUPLICATE_NAME` | WARN | Case-insensitive name collision |
+| Group name duplicate | `409` | `DUPLICATE_NAME` | WARN | Case-insensitive name collision. Also caught from DB unique constraint violation (error 23505) as TOCTOU safety net. |
 | Invalid request body (validation) | `422` | `VALIDATION_ERROR` | INFO | Missing name, invalid status, empty add/remove, etc. |
 | User IDs in `add` not found | `422` | `USER_NOT_FOUND` | INFO | Members endpoint — referencing non-existent users |
 | Role IDs in `add` not found | `422` | `ROLE_NOT_FOUND` | INFO | Roles endpoint — referencing non-existent roles |
