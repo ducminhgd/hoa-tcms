@@ -35,10 +35,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 ///   Load balancers should use this signal to avoid routing traffic to
 ///   a dead or degraded instance.
 async fn health_check(state: web::Data<AppState>) -> actix_web::HttpResponse {
-    let db_healthy = sqlx::query("SELECT 1")
-        .execute(&state.pool)
-        .await
-        .is_ok();
+    let db_healthy = sqlx::query("SELECT 1").execute(&state.pool).await.is_ok();
 
     let redis_healthy = state
         .redis_client

@@ -20,14 +20,10 @@ pub fn validate_email(email: &str) -> Result<(), ValidationError> {
 /// Validate password strength.
 pub fn validate_password(password: &str) -> Result<(), ValidationError> {
     if password.len() < 8 {
-        return Err(ValidationError(
-            "password must be at least 8 characters".into(),
-        ));
+        return Err(ValidationError("password must be at least 8 characters".into()));
     }
     if password.len() > 128 {
-        return Err(ValidationError(
-            "password must not exceed 128 characters".into(),
-        ));
+        return Err(ValidationError("password must not exceed 128 characters".into()));
     }
     Ok(())
 }
@@ -55,11 +51,9 @@ pub fn validate_length(
     Ok(())
 }
 
-/// Validate that a username contains only permitted characters.
+/// Validate that a username contains only permitted characters and is within length bounds.
 pub fn validate_username(username: &str) -> Result<(), ValidationError> {
-    if username.is_empty() {
-        return Err(ValidationError("username must not be empty".into()));
-    }
+    validate_length(username, "username", 3, 100)?;
     if !username
         .chars()
         .all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == '.')
