@@ -1,34 +1,32 @@
 //! Validation helpers — input sanitisation and format checks.
 
 use std::fmt;
+use validator::ValidateEmail;
 
 /// Validate that a string is a syntactically valid email address.
-///
-/// This is a basic check; Phase 2 may replace it with a dedicated
-/// validation library.
 pub fn validate_email(email: &str) -> Result<(), ValidationError> {
     if email.is_empty() {
         return Err(ValidationError("email must not be empty".into()));
     }
-    // Minimal check: contains exactly one '@' with non-empty local and domain parts.
-    let parts: Vec<&str> = email.splitn(2, '@').collect();
-    if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
-        return Err(ValidationError(
-            "email must be a valid email address".into(),
-        ));
+    if email.len() > 254 {
+        return Err(ValidationError("email must not exceed 254 characters".into()));
     }
-    let domain = parts[1];
-    if !domain.contains('.') {
-        return Err(ValidationError("email domain must contain a dot".into()));
+    if !email.validate_email() {
+        return Err(ValidationError("email must be a valid email address".into()));
     }
     Ok(())
 }
 
-/// Validate minimum password length.
+/// Validate password strength.
 pub fn validate_password(password: &str) -> Result<(), ValidationError> {
     if password.len() < 8 {
         return Err(ValidationError(
             "password must be at least 8 characters".into(),
+        ));
+    }
+    if password.len() > 128 {
+        return Err(ValidationError(
+            "password must not exceed 128 characters".into(),
         ));
     }
     Ok(())

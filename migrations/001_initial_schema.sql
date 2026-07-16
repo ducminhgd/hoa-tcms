@@ -76,6 +76,7 @@ CREATE TABLE groups (
     deleted_by      BIGINT          REFERENCES users(id),
     deleted_at      TIMESTAMPTZ,
 
+    CONSTRAINT uq_groups_name UNIQUE (name),
     CONSTRAINT chk_groups_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
 );
 
@@ -99,6 +100,7 @@ CREATE TABLE roles (
     deleted_by      BIGINT          REFERENCES users(id),
     deleted_at      TIMESTAMPTZ,
 
+    CONSTRAINT uq_roles_name UNIQUE (name),
     CONSTRAINT chk_roles_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
 );
 
@@ -162,7 +164,9 @@ CREATE TABLE test_categories (
     updated_by      BIGINT          NOT NULL REFERENCES users(id),
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     deleted_by      BIGINT          REFERENCES users(id),
-    deleted_at      TIMESTAMPTZ
+    deleted_at      TIMESTAMPTZ,
+
+    CONSTRAINT uq_test_categories_project_name UNIQUE (project_id, name)
 );
 
 CREATE TRIGGER trg_test_categories_set_updated_at
@@ -184,7 +188,9 @@ CREATE TABLE test_case_templates (
     updated_by          BIGINT          NOT NULL REFERENCES users(id),
     updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     deleted_by          BIGINT          REFERENCES users(id),
-    deleted_at          TIMESTAMPTZ
+    deleted_at          TIMESTAMPTZ,
+
+    CONSTRAINT uq_test_case_templates_project_name UNIQUE (project_id, name)
 );
 
 CREATE TRIGGER trg_test_case_templates_set_updated_at
@@ -363,6 +369,7 @@ CREATE TABLE object_sharing (
     updated_by      BIGINT          NOT NULL REFERENCES users(id),
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
 
+    CONSTRAINT uq_object_sharing UNIQUE (user_id, resource_type, resource_id),
     CONSTRAINT chk_object_sharing_resource_type CHECK (
         resource_type IN ('project', 'test_plan', 'test_case', 'test_run', 'test_execution')
     ),
@@ -536,7 +543,8 @@ CREATE TABLE execution_testers (
 -- Every foreign key column is indexed. Entity tables with soft-delete get a
 -- composite index on (deleted_at, id) for efficient active-row filtering.
 
--- Users (no extra indexes needed beyond UNIQUE on username, email)
+-- Users
+CREATE INDEX idx_users_deleted_at_id ON users(deleted_at, id);
 
 -- Groups
 CREATE INDEX idx_groups_created_by ON groups(created_by);
@@ -597,6 +605,7 @@ CREATE INDEX idx_test_case_results_test_case_id ON test_case_results(test_case_i
 CREATE INDEX idx_test_case_results_tested_by ON test_case_results(tested_by);
 CREATE INDEX idx_test_case_results_created_by ON test_case_results(created_by);
 CREATE INDEX idx_test_case_results_updated_by ON test_case_results(updated_by);
+CREATE INDEX idx_test_case_results_result ON test_case_results(result);
 CREATE INDEX idx_test_case_results_deleted_at_id ON test_case_results(deleted_at, id);
 
 -- Object Sharing

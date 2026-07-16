@@ -27,10 +27,10 @@ impl PaginationParams {
     ///
     /// Returns `(offset, limit)` suitable for SQL `OFFSET` / `LIMIT`.
     pub fn to_offset_limit(&self) -> (u64, u64) {
-        let page = self.page.max(1);
-        let limit = self.limit.clamp(1, MAX_PAGE_SIZE);
-        let offset = u64::from((page - 1) * limit);
-        (offset, u64::from(limit))
+        let page = u64::from(self.page.max(1));
+        let limit = u64::from(self.limit.clamp(1, MAX_PAGE_SIZE));
+        let offset = (page - 1) * limit;
+        (offset, limit)
     }
 
     /// Return the page number (1-based).

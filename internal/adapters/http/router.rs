@@ -35,23 +35,31 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 ///   Load balancers should use this signal to avoid routing traffic to
 ///   a dead or degraded instance.
 async fn health_check(state: web::Data<AppState>) -> actix_web::HttpResponse {
-    let db_healthy = sqlx::query("SELECT 1").execute(&state.pool).await.is_ok();
+    let db_healthy = sqlx::query("SELECT 1")
+        .execute(&state.pool)
+        .await
+        .is_ok();
 
-    if db_healthy {
-        actix_web::HttpResponse::Ok().json(serde_json::json!({
-            "status": "ok",
-            "version": env!("CARGO_PKG_VERSION"),
-            "checks": {
-                "database": "healthy"
-            }
-        }))
+    let redis_healthy = state
+        .redis_client
+        .get_connection()
+        .and_then(|mut conn| redis::cmd("PING").query::<String>(&mut conn))
+        .is_ok();
+
+    let all_healthy = db_healthy && redis_healthy;
+
+    let mut status = if all_healthy {
+        actix_web::HttpResponse::Ok()
     } else {
-        actix_web::HttpResponse::ServiceUnavailable().json(serde_json::json!({
-            "status": "error",
-            "version": env!("CARGO_PKG_VERSION"),
-            "checks": {
-                "database": "unreachable"
-            }
-        }))
-    }
+        actix_web::HttpResponse::ServiceUnavailable()
+    };
+
+    status.json(serde_json::json!({
+        "status": if all_healthy { "ok" } else { "error" },
+        "version": env!("CARGO_PKG_VERSION"),
+        "checks": {
+            "database": if db_healthy { "healthy" } else { "unreachable" },
+            "redis": if redis_healthy { "healthy" } else { "unreachable" },
+        }
+    }))
 }

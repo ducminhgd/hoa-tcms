@@ -37,40 +37,6 @@ pub enum RepositoryError {
     Connection(String),
 }
 
-// ---------------------------------------------------------------------------
-// Conversion to API errors
-// ---------------------------------------------------------------------------
-// The `From` impl is valid here because `RepositoryError` (the type parameter
-// of `From`) is defined in this crate, satisfying the orphan rule even though
-// `ApiError` is defined in the `hoa-tcms-pkg` crate.
-//
-// Sensitive database details (table names, SQL state codes) from the
-// `Database` and `Connection` variants are logged and replaced with a
-// generic message to prevent information leakage in HTTP responses.
-
-impl From<RepositoryError> for hoa_tcms_pkg::errors::ApiError {
-    fn from(err: RepositoryError) -> Self {
-        match err {
-            RepositoryError::NotFound => {
-                hoa_tcms_pkg::errors::ApiError::not_found("resource not found")
-            }
-            RepositoryError::Duplicate(msg) => hoa_tcms_pkg::errors::ApiError::conflict(msg),
-            RepositoryError::Database(details) => {
-                tracing::error!(
-                    error.details = %details,
-                    error.variant = "database",
-                    "repository error mapped to generic API error"
-                );
-                hoa_tcms_pkg::errors::ApiError::internal("an internal error occurred")
-            }
-            RepositoryError::Connection(details) => {
-                tracing::error!(
-                    error.details = %details,
-                    error.variant = "connection",
-                    "repository error mapped to generic API error"
-                );
-                hoa_tcms_pkg::errors::ApiError::internal("an internal error occurred")
-            }
-        }
-    }
-}
+// The `From<RepositoryError> for ApiError` conversion lives in
+// `internal/adapters/http/errors.rs` — the adapter layer is the correct
+// place for mapping internal errors to HTTP presentation types.
