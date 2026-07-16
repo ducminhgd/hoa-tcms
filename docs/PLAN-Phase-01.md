@@ -17,11 +17,11 @@ Tasks are sequential within each milestone. Parallel opportunities noted inline.
 
 | # | Task | Status |
 |---|------|--------|
-| 1 | Project scaffold — `cargo init`, Clean Architecture layout, `.env`, `Makefile` | To do |
-| 2 | Database migrations — all 14 entities + 9 junction tables, audit column triggers | To do |
-| 3 | Seed data — permissions table, config file schema (YAML) | To do |
-| 4 | CI/CD pipeline — `cargo test`, `cargo clippy`, `cargo fmt --check` | To do |
-| 5 | Dev environment — Docker Compose (PostgreSQL + Redis), hot-reload | To do |
+| 1 | Project scaffold — `cargo init`, Clean Architecture layout, `.env`, `Makefile` | Done |
+| 2 | Database migrations — all 14 entities + 9 junction tables, audit column triggers | Done |
+| 3 | Seed data — permissions table, config file schema (YAML) | Done |
+| 4 | CI/CD pipeline — `cargo test`, `cargo clippy`, `cargo fmt --check` | Done |
+| 5 | Dev environment — Docker Compose (PostgreSQL + Redis), hot-reload | Done |
 
 ### Milestone 2: IAM
 
