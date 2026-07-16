@@ -27,6 +27,7 @@ rand.workspace = true
 actix-session.workspace = true
 async-trait.workspace = true
 base64.workspace = true
+serde_yaml.workspace = true
 
 [lib]
 name = "hoa_tcms_core"

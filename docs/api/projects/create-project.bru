@@ -13,6 +13,18 @@ post {
 body:json {
   {
     "name": "My Project",
-    "description": "Project description"
+    "description": "Project description",
+    "status": "ACTIVE"
   }
+}
+
+docs {
+  # Create Project
+
+  Creates a new project with auto-seeded metadata. Requires `project:create` permission.
+
+  - `201 Created` — project created, `Location` header set
+  - `403 Forbidden` — missing `project:create` permission
+  - `409 Conflict` — project name already exists (case-insensitive)
+  - `422 Unprocessable Entity` — validation error (name empty, status invalid)
 }

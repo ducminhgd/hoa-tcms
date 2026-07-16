@@ -9,3 +9,19 @@ get {
   body: none
   auth: inherit
 }
+
+docs {
+  # List Projects
+
+  Returns a paginated list of projects the authenticated user is a member of.
+  System Admin sees all non-deleted projects. Requires `project:read_list` permission.
+
+  Query params:
+  - `page` (default 1)
+  - `limit` (default 25, max 100)
+  - `status` (optional: ACTIVE or INACTIVE)
+
+  - `200 OK` — paginated list with metadata
+  - `401 Unauthorized` — not authenticated
+  - `403 Forbidden` — missing `project:read_list` permission
+}

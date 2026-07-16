@@ -65,4 +65,19 @@ impl AuthorizationService {
             .has_permission_by_code(user_id, code)
             .await
     }
+
+    /// Check whether a user is a system administrator.
+    ///
+    /// Returns `true` if the user holds the System Admin role.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(ServiceError::Database)` if the underlying repository
+    /// encounters a failure.
+    pub async fn is_admin(&self, user_id: i64) -> Result<bool, ServiceError> {
+        self.admin_bypass_repo
+            .is_system_admin(user_id)
+            .await
+            .map_err(ServiceError::from)
+    }
 }

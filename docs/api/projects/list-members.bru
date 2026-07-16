@@ -1,0 +1,23 @@
+meta {
+  name: List Project Members
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/projects/1/members
+  body: none
+  auth: inherit
+}
+
+docs {
+  # List Project Members
+
+  Returns all members of a project with their roles. Requires `project:read` permission.
+  User must be a member (or System Admin).
+
+  - `200 OK` — list of members
+  - `401 Unauthorized` — not authenticated
+  - `403 Forbidden` — missing permission or not a member
+  - `404 Not Found` — project does not exist
+}

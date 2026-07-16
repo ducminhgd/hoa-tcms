@@ -57,6 +57,7 @@ base64 = "0.22"
 
 # Config
 config = "0.15"
+serde_yaml = "0.9"
 
 # Logging / tracing
 tracing = "0.1"
