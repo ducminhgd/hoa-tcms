@@ -32,7 +32,7 @@
 
 ## Infrastructure Layer
 
-- [x] 3. **Create SQL migration template for audit columns** -- `design.md#Components`
+- [ ] 3. **Create SQL migration template for audit columns** -- `design.md#Components`
   - Provide reusable SQL fragments for migration files:
     - `audit_columns_ddl()` returns the four-column DDL fragment:
       ```sql

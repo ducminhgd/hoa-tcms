@@ -4,7 +4,5 @@
 //! Redis session storage, configuration loading, and the database connection pool.
 
 pub mod config;
-pub mod crypto;
-pub mod db;
 pub mod postgres;
 pub mod redis;

@@ -25,7 +25,6 @@ serde_json = "1"
 
 # Database
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "json"] }
-sea-orm = { version = "1", features = ["sqlx-postgres", "runtime-tokio", "macros", "with-chrono", "with-uuid"] }
 
 # Redis
 redis = { version = "0.27", features = ["tokio-comp"] }
@@ -40,20 +39,13 @@ uuid = { version = "1", features = ["v4", "serde"] }
 thiserror = "2"
 
 # Session
-actix-session = { version = "0.10", features = ["redis-session"] }
+actix-session = "0.10"
 
 # Password hashing
 pbkdf2 = "0.12"
 hmac = "0.12"
 sha2 = "0.10"
 password-hash = "0.5"
-rand = "0.8"
-
-# Async trait support
-async-trait = "0.1"
-
-# Base64 encoding
-base64 = "0.22"
 
 # Config
 config = "0.15"

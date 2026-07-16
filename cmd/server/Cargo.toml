@@ -15,8 +15,6 @@ tracing-subscriber.workspace = true
 dotenvy.workspace = true
 sqlx.workspace = true
 redis.workspace = true
-actix-session.workspace = true
-sea-orm.workspace = true
 
 [[bin]]
 name = "server"

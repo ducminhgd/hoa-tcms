@@ -38,7 +38,7 @@
     to a specific table alias (e.g. `WHERE p.deleted_at IS NULL`).
   - Write unit tests verifying the generated SQL includes the correct WHERE clause.
 
-- [x] 4. **Create migration template for entity tables** -- `design.md#Column Convention`
+- [ ] 4. **Create migration template for entity tables** -- `design.md#Column Convention`
   - Provide an SQL template for adding `deleted_at`/`deleted_by` columns to entity
     tables, including the FK constraint and partial index.
   - Template:
