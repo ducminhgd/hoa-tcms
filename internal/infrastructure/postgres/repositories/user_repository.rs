@@ -120,7 +120,7 @@ impl UserRepository for SqlUserRepository {
         .insert(&self.db)
         .await
         .map_err(|e| RepositoryError::Database(e.to_string()))
-        .and_then(|m| model_to_entity(m))
+        .and_then(model_to_entity)
     }
 
     async fn update(&self, user: &User) -> RepositoryResult<User> {
@@ -152,7 +152,7 @@ impl UserRepository for SqlUserRepository {
         .update(&self.db)
         .await
         .map_err(|e| RepositoryError::Database(e.to_string()))
-        .and_then(|m| model_to_entity(m))
+        .and_then(model_to_entity)
     }
 
     async fn soft_delete(&self, id: i64, deleted_by: i64) -> RepositoryResult<()> {

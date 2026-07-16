@@ -104,7 +104,7 @@ impl GroupRepository for SqlGroupRepository {
         .insert(&self.db)
         .await
         .map_err(|e| RepositoryError::Database(e.to_string()))
-        .and_then(|m| model_to_entity(m))
+        .and_then(model_to_entity)
     }
 
     async fn update(&self, group: &Group) -> RepositoryResult<Group> {
@@ -132,7 +132,7 @@ impl GroupRepository for SqlGroupRepository {
         .update(&self.db)
         .await
         .map_err(|e| RepositoryError::Database(e.to_string()))
-        .and_then(|m| model_to_entity(m))
+        .and_then(model_to_entity)
     }
 
     async fn soft_delete(&self, id: i64, deleted_by: i64) -> RepositoryResult<()> {

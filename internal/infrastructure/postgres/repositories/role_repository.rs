@@ -114,7 +114,7 @@ impl RoleRepository for SqlRoleRepository {
         .insert(&self.db)
         .await
         .map_err(|e| RepositoryError::Database(e.to_string()))
-        .and_then(|m| model_to_role(m))
+        .and_then(model_to_role)
     }
 
     async fn update(&self, role: &Role) -> RepositoryResult<Role> {
@@ -142,7 +142,7 @@ impl RoleRepository for SqlRoleRepository {
         .update(&self.db)
         .await
         .map_err(|e| RepositoryError::Database(e.to_string()))
-        .and_then(|m| model_to_role(m))
+        .and_then(model_to_role)
     }
 
     async fn find_all(&self, page: u32, limit: u32) -> RepositoryResult<(Vec<Role>, u64)> {
