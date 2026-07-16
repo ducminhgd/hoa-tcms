@@ -1,0 +1,18 @@
+meta {
+  name: Create Project
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/projects
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "My Project",
+    "description": "Project description"
+  }
+}

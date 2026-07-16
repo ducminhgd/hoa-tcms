@@ -1,0 +1,11 @@
+meta {
+  name: List Test Runs
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/test-runs?page=1&limit=25
+  body: none
+  auth: inherit
+}

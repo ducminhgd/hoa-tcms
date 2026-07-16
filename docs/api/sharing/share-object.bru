@@ -1,0 +1,20 @@
+meta {
+  name: Share Object
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/sharing
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "userId": 2,
+    "resourceType": "test_case",
+    "resourceId": 1,
+    "role": "Editor"
+  }
+}

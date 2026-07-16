@@ -1,0 +1,19 @@
+meta {
+  name: List Users
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users?page=1&limit=25
+  body: none
+  auth: inherit
+}
+
+docs {
+  # List Users
+
+  Returns a paginated list of users.
+
+  Query params: `page`, `limit` (max 100), `search`, `status`
+}

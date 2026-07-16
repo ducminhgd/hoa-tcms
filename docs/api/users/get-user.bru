@@ -1,0 +1,20 @@
+meta {
+  name: Get User
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/{{userId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get User
+
+  Returns a single user by ID.
+
+  - `200 OK`
+  - `404 Not Found`
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Get Self Profile
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/me
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get Self Profile
+
+  Returns the authenticated user's profile.
+
+  - `200 OK`
+  - `401 Unauthorized` — not authenticated
+}
