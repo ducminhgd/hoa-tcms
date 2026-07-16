@@ -26,6 +26,10 @@ COMMIT;
 -- ============================================================================
 -- DOWN MIGRATION (ROLLBACK)
 -- ============================================================================
+-- IMPORTANT: Run the 004_seed_system_admin_role rollback BEFORE this rollback.
+-- The System Admin role has NULL in created_by and updated_by, which would
+-- violate the NOT NULL constraint being restored below.
+--
 -- BEGIN;
 --
 -- ALTER TABLE roles ALTER COLUMN created_by SET NOT NULL;

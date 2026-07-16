@@ -6,10 +6,12 @@
 
 use chrono::{DateTime, Utc};
 
+use crate::domain::value_objects::role_status::RoleStatus;
+
 /// A named set of permissions.
 ///
-/// The built-in `"System Admin"` role is protected by the domain — it cannot
-/// be deleted or modified through the application API.
+/// The built-in `"System Admin"` role is protected by the `is_system` flag —
+/// it cannot be deleted or modified through the application API.
 #[derive(Debug, Clone)]
 pub struct Role {
     /// Auto-increment primary key (assigned by the database).
@@ -18,8 +20,13 @@ pub struct Role {
     /// Unique human-readable name (e.g. `"System Admin"`, `"Tester"`).
     pub name: String,
 
-    /// Role status (`"ACTIVE"`, `"INACTIVE"`, etc.). Defaults to `"ACTIVE"`.
-    pub status: String,
+    /// Role lifecycle status. Defaults to `Active`.
+    pub status: RoleStatus,
+
+    /// Whether this is a system-protected role. System roles cannot be
+    /// deleted or have their permissions modified through the application API.
+    /// Set via the `is_system` column in the database.
+    pub is_system: bool,
 
     /// ID of the user who created this role. `None` for pre-seeded roles.
     pub created_by: Option<i64>,
@@ -44,7 +51,8 @@ impl Role {
     /// Create a new role.
     ///
     /// The `id` field is set to `0` — the repository assigns the real value
-    /// when persisting to the database.
+    /// when persisting to the database. The `is_system` flag is `false` by
+    /// default — only seeded roles set it to `true`.
     ///
     /// # Arguments
     ///
@@ -55,7 +63,8 @@ impl Role {
         Self {
             id: 0,
             name,
-            status: "ACTIVE".to_string(),
+            status: RoleStatus::Active,
+            is_system: false,
             created_by,
             created_at: now,
             updated_by: created_by,
@@ -65,12 +74,12 @@ impl Role {
         }
     }
 
-    /// Returns `true` for the built-in `"System Admin"` role.
+    /// Returns `true` if this is a system-protected role.
     ///
-    /// System Admin is a protected role — it cannot be deleted or renamed
-    /// through the application.
+    /// System roles are identified by the `is_system` column in the database,
+    /// not by name. This is immune to renames.
     pub fn is_protected(&self) -> bool {
-        self.name == "System Admin"
+        self.is_system
     }
 }
 
@@ -82,6 +91,8 @@ mod tests {
     fn create_role_with_creator() {
         let role = Role::create("Tester".into(), Some(1));
         assert_eq!(role.name, "Tester");
+        assert_eq!(role.status, RoleStatus::Active);
+        assert!(!role.is_system);
         assert_eq!(role.created_by, Some(1));
         assert_eq!(role.updated_by, Some(1));
     }
@@ -94,21 +105,15 @@ mod tests {
     }
 
     #[test]
-    fn system_admin_is_protected() {
-        let role = Role::create("System Admin".into(), None);
+    fn system_role_is_protected() {
+        let mut role = Role::create("Any Name".into(), None);
+        role.is_system = true;
         assert!(role.is_protected());
     }
 
     #[test]
-    fn other_roles_are_not_protected() {
+    fn non_system_role_is_not_protected() {
         let role = Role::create("Tester".into(), None);
-        assert!(!role.is_protected());
-    }
-
-    #[test]
-    fn case_sensitive_protected_check() {
-        // The check is exact — casing matters.
-        let role = Role::create("system admin".into(), None);
         assert!(!role.is_protected());
     }
 }

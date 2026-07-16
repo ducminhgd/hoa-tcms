@@ -4,4 +4,5 @@
 
 pub mod group_status;
 pub mod password_hash;
+pub mod role_status;
 pub mod user_status;

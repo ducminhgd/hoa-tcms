@@ -8,6 +8,9 @@ pub struct Model {
     pub id: i64,
     pub name: String,
     pub status: String,
+    /// System-protected roles cannot be deleted or have permissions modified
+    /// through the application API. Set TRUE for the seeded "System Admin" role.
+    pub is_system: bool,
     pub created_by: Option<i64>,
     pub created_at: DateTime,
     pub updated_by: Option<i64>,

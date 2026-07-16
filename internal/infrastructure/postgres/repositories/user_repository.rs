@@ -36,17 +36,21 @@ impl SqlUserRepository {
 // SeaORM Model -> domain Entity mapping
 // ---------------------------------------------------------------------------
 
-fn model_to_entity(model: users::Model) -> User {
-    User {
+fn model_to_entity(model: users::Model) -> RepositoryResult<User> {
+    let status: UserStatus = model.status.parse().map_err(|e| {
+        RepositoryError::Database(format!(
+            "invalid user status '{}' for user {}: {}",
+            model.status, model.id, e
+        ))
+    })?;
+
+    Ok(User {
         id: model.id,
         username: model.username,
         email: model.email,
         password_hash: model.password_hash,
         fullname: model.fullname,
-        status: model.status.parse::<UserStatus>().unwrap_or_else(|_| {
-            tracing::warn!("invalid user status in database, defaulting to Active");
-            UserStatus::Active
-        }),
+        status,
         created_by: model.created_by,
         created_at: DateTime::<Utc>::from_naive_utc_and_offset(model.created_at, Utc),
         updated_by: model.updated_by,
@@ -55,7 +59,7 @@ fn model_to_entity(model: users::Model) -> User {
         deleted_at: model
             .deleted_at
             .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
-    }
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -69,8 +73,9 @@ impl UserRepository for SqlUserRepository {
             .filter(users::Column::DeletedAt.is_null())
             .one(&self.db)
             .await
-            .map_err(|e| RepositoryError::Database(e.to_string()))
-            .map(|opt| opt.map(model_to_entity))
+            .map_err(|e| RepositoryError::Database(e.to_string()))?
+            .map(model_to_entity)
+            .transpose()
     }
 
     async fn find_by_username(&self, username: &str) -> RepositoryResult<Option<User>> {
@@ -82,8 +87,9 @@ impl UserRepository for SqlUserRepository {
             .filter(users::Column::DeletedAt.is_null())
             .one(&self.db)
             .await
-            .map_err(|e| RepositoryError::Database(e.to_string()))
-            .map(|opt| opt.map(model_to_entity))
+            .map_err(|e| RepositoryError::Database(e.to_string()))?
+            .map(model_to_entity)
+            .transpose()
     }
 
     async fn find_by_email(&self, email: &str) -> RepositoryResult<Option<User>> {
@@ -95,8 +101,9 @@ impl UserRepository for SqlUserRepository {
             .filter(users::Column::DeletedAt.is_null())
             .one(&self.db)
             .await
-            .map_err(|e| RepositoryError::Database(e.to_string()))
-            .map(|opt| opt.map(model_to_entity))
+            .map_err(|e| RepositoryError::Database(e.to_string()))?
+            .map(model_to_entity)
+            .transpose()
     }
 
     async fn create(&self, user: &User) -> RepositoryResult<User> {
@@ -112,15 +119,19 @@ impl UserRepository for SqlUserRepository {
         }
         .insert(&self.db)
         .await
-        .map(model_to_entity)
         .map_err(|e| RepositoryError::Database(e.to_string()))
+        .and_then(|m| model_to_entity(m))
     }
 
     async fn update(&self, user: &User) -> RepositoryResult<User> {
-        // Verify the record exists and is not soft-deleted.
-        let _existing = self
-            .find_by_id(user.id)
-            .await?
+        // Read the current row to (a) verify it exists and is not soft-deleted,
+        // and (b) preserve the soft-delete state so a concurrent soft_delete
+        // cannot be accidentally reverted.
+        let existing = users::Entity::find_by_id(user.id)
+            .filter(users::Column::DeletedAt.is_null())
+            .one(&self.db)
+            .await
+            .map_err(|e| RepositoryError::Database(e.to_string()))?
             .ok_or(RepositoryError::NotFound)?;
 
         users::ActiveModel {
@@ -132,32 +143,36 @@ impl UserRepository for SqlUserRepository {
             status: Set(user.status.to_string()),
             updated_by: Set(user.updated_by),
             updated_at: Set(Utc::now().naive_utc()),
+            // Preserve soft-delete state from the existing row so a concurrent
+            // soft_delete cannot be reverted.
+            deleted_at: Set(existing.deleted_at),
+            deleted_by: Set(existing.deleted_by),
             ..Default::default()
         }
         .update(&self.db)
         .await
-        .map(model_to_entity)
         .map_err(|e| RepositoryError::Database(e.to_string()))
+        .and_then(|m| model_to_entity(m))
     }
 
     async fn soft_delete(&self, id: i64, deleted_by: i64) -> RepositoryResult<()> {
-        // Verify the record exists and is not already soft-deleted.
-        let _existing = users::Entity::find_by_id(id)
+        // Use a filtered update to atomically check that the record is not
+        // already soft-deleted — avoids a TOCTOU race between find and update.
+        let result = users::Entity::update_many()
+            .filter(users::Column::Id.eq(id))
             .filter(users::Column::DeletedAt.is_null())
-            .one(&self.db)
+            .set(users::ActiveModel {
+                deleted_at: Set(Some(Utc::now().naive_utc())),
+                deleted_by: Set(Some(deleted_by)),
+                ..Default::default()
+            })
+            .exec(&self.db)
             .await
-            .map_err(|e| RepositoryError::Database(e.to_string()))?
-            .ok_or(RepositoryError::NotFound)?;
+            .map_err(|e| RepositoryError::Database(e.to_string()))?;
 
-        users::ActiveModel {
-            id: Set(id),
-            deleted_at: Set(Some(Utc::now().naive_utc())),
-            deleted_by: Set(Some(deleted_by)),
-            ..Default::default()
+        if result.rows_affected == 0 {
+            return Err(RepositoryError::NotFound);
         }
-        .update(&self.db)
-        .await
-        .map_err(|e| RepositoryError::Database(e.to_string()))?;
 
         Ok(())
     }
@@ -170,13 +185,13 @@ impl UserRepository for SqlUserRepository {
 
         let page_zero_based = page.saturating_sub(1) as u64;
 
-        let users = paginator
+        let users: Vec<User> = paginator
             .fetch_page(page_zero_based)
             .await
             .map_err(|e| RepositoryError::Database(e.to_string()))?
             .into_iter()
             .map(model_to_entity)
-            .collect();
+            .collect::<Result<Vec<_>, _>>()?;
 
         let count = paginator
             .num_items()
@@ -187,25 +202,28 @@ impl UserRepository for SqlUserRepository {
     }
 
     async fn update_password_hash(&self, id: i64, password_hash: &str) -> RepositoryResult<()> {
-        // Verify the user exists and is not soft-deleted.
-        let _existing = self
-            .find_by_id(id)
-            .await?
-            .ok_or(RepositoryError::NotFound)?;
+        // Use a filtered update so we atomically check the user exists and is
+        // not soft-deleted.
+        let result = users::Entity::update_many()
+            .filter(users::Column::Id.eq(id))
+            .filter(users::Column::DeletedAt.is_null())
+            .set(users::ActiveModel {
+                password_hash: Set(password_hash.to_owned()),
+                updated_at: Set(Utc::now().naive_utc()),
+                ..Default::default()
+            })
+            .exec(&self.db)
+            .await
+            .map_err(|e| match &e {
+                DbErr::RecordNotFound(_) => RepositoryError::NotFound,
+                _ => RepositoryError::Database(e.to_string()),
+            })?;
 
-        users::ActiveModel {
-            id: Set(id),
-            password_hash: Set(password_hash.to_owned()),
-            updated_at: Set(Utc::now().naive_utc()),
-            ..Default::default()
+        if result.rows_affected == 0 {
+            return Err(RepositoryError::NotFound);
         }
-        .update(&self.db)
-        .await
-        .map(|_| ())
-        .map_err(|e| match &e {
-            DbErr::RecordNotFound(_) => RepositoryError::NotFound,
-            _ => RepositoryError::Database(e.to_string()),
-        })
+
+        Ok(())
     }
 }
 

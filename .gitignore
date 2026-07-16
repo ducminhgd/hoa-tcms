@@ -31,3 +31,5 @@ target
 
 # File storage uploads
 storage/uploads/
+
+*.local.*

@@ -17,9 +17,11 @@ BEGIN;
 -- ============================================================================
 -- created_by and updated_by are NULL because no user exists at migration time
 -- to reference (migration 003 made these columns nullable).
+-- is_system is TRUE so the application can identify this role as protected
+-- without relying on exact name matching.
 
-INSERT INTO roles (name, created_by, updated_by)
-VALUES ('System Admin', NULL, NULL)
+INSERT INTO roles (name, is_system, created_by, updated_by)
+VALUES ('System Admin', TRUE, NULL, NULL)
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================================

@@ -38,15 +38,19 @@ impl SqlGroupRepository {
 // SeaORM Model -> domain Entity mapping
 // ---------------------------------------------------------------------------
 
-fn model_to_entity(model: groups::Model) -> Group {
-    Group {
+fn model_to_entity(model: groups::Model) -> RepositoryResult<Group> {
+    let status: GroupStatus = model.status.parse().map_err(|e| {
+        RepositoryError::Database(format!(
+            "invalid group status '{}' for group {}: {}",
+            model.status, model.id, e
+        ))
+    })?;
+
+    Ok(Group {
         id: model.id,
         name: model.name,
         description: model.description,
-        status: model.status.parse::<GroupStatus>().unwrap_or_else(|_| {
-            tracing::warn!("invalid group status in database, defaulting to Active");
-            GroupStatus::Active
-        }),
+        status,
         created_by: model.created_by,
         created_at: DateTime::<Utc>::from_naive_utc_and_offset(model.created_at, Utc),
         updated_by: model.updated_by,
@@ -55,7 +59,7 @@ fn model_to_entity(model: groups::Model) -> Group {
         deleted_at: model
             .deleted_at
             .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
-    }
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -69,8 +73,9 @@ impl GroupRepository for SqlGroupRepository {
             .filter(groups::Column::DeletedAt.is_null())
             .one(&self.db)
             .await
-            .map_err(|e| RepositoryError::Database(e.to_string()))
-            .map(|opt| opt.map(model_to_entity))
+            .map_err(|e| RepositoryError::Database(e.to_string()))?
+            .map(model_to_entity)
+            .transpose()
     }
 
     async fn find_by_name(&self, name: &str) -> RepositoryResult<Option<Group>> {
@@ -82,8 +87,9 @@ impl GroupRepository for SqlGroupRepository {
             .filter(groups::Column::DeletedAt.is_null())
             .one(&self.db)
             .await
-            .map_err(|e| RepositoryError::Database(e.to_string()))
-            .map(|opt| opt.map(model_to_entity))
+            .map_err(|e| RepositoryError::Database(e.to_string()))?
+            .map(model_to_entity)
+            .transpose()
     }
 
     async fn save(&self, group: &Group) -> RepositoryResult<Group> {
@@ -97,15 +103,19 @@ impl GroupRepository for SqlGroupRepository {
         }
         .insert(&self.db)
         .await
-        .map(model_to_entity)
         .map_err(|e| RepositoryError::Database(e.to_string()))
+        .and_then(|m| model_to_entity(m))
     }
 
     async fn update(&self, group: &Group) -> RepositoryResult<Group> {
-        // Verify the record exists and is not soft-deleted.
-        let _existing = self
-            .find_by_id(group.id)
-            .await?
+        // Read the current row to verify it exists, is not soft-deleted, and
+        // preserve the soft-delete state so a concurrent soft_delete cannot
+        // be accidentally reverted.
+        let existing = groups::Entity::find_by_id(group.id)
+            .filter(groups::Column::DeletedAt.is_null())
+            .one(&self.db)
+            .await
+            .map_err(|e| RepositoryError::Database(e.to_string()))?
             .ok_or(RepositoryError::NotFound)?;
 
         groups::ActiveModel {
@@ -114,32 +124,35 @@ impl GroupRepository for SqlGroupRepository {
             description: Set(group.description.clone()),
             status: Set(group.status.to_string()),
             updated_by: Set(group.updated_by),
+            // Preserve soft-delete state from the existing row.
+            deleted_at: Set(existing.deleted_at),
+            deleted_by: Set(existing.deleted_by),
             ..Default::default()
         }
         .update(&self.db)
         .await
-        .map(model_to_entity)
         .map_err(|e| RepositoryError::Database(e.to_string()))
+        .and_then(|m| model_to_entity(m))
     }
 
     async fn soft_delete(&self, id: i64, deleted_by: i64) -> RepositoryResult<()> {
-        // Verify the record exists and is not already soft-deleted.
-        let _existing = groups::Entity::find_by_id(id)
+        // Use a filtered update to atomically verify the record is not already
+        // soft-deleted — avoids a TOCTOU race between find and update.
+        let result = groups::Entity::update_many()
+            .filter(groups::Column::Id.eq(id))
             .filter(groups::Column::DeletedAt.is_null())
-            .one(&self.db)
+            .set(groups::ActiveModel {
+                deleted_at: Set(Some(Utc::now().naive_utc())),
+                deleted_by: Set(Some(deleted_by)),
+                ..Default::default()
+            })
+            .exec(&self.db)
             .await
-            .map_err(|e| RepositoryError::Database(e.to_string()))?
-            .ok_or(RepositoryError::NotFound)?;
+            .map_err(|e| RepositoryError::Database(e.to_string()))?;
 
-        groups::ActiveModel {
-            id: Set(id),
-            deleted_at: Set(Some(Utc::now().naive_utc())),
-            deleted_by: Set(Some(deleted_by)),
-            ..Default::default()
+        if result.rows_affected == 0 {
+            return Err(RepositoryError::NotFound);
         }
-        .update(&self.db)
-        .await
-        .map_err(|e| RepositoryError::Database(e.to_string()))?;
 
         Ok(())
     }
@@ -168,13 +181,13 @@ impl GroupRepository for SqlGroupRepository {
 
         let page_zero_based = page.saturating_sub(1) as u64;
 
-        let groups = paginator
+        let groups: Vec<Group> = paginator
             .fetch_page(page_zero_based)
             .await
             .map_err(|e| RepositoryError::Database(e.to_string()))?
             .into_iter()
             .map(model_to_entity)
-            .collect();
+            .collect::<Result<Vec<_>, _>>()?;
 
         let count = paginator
             .num_items()

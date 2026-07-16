@@ -20,6 +20,7 @@ use crate::application::repositories::role_repository::RoleRepository;
 use crate::application::repositories::{RepositoryError, RepositoryResult};
 use crate::domain::entities::permission::Permission;
 use crate::domain::entities::role::Role;
+use crate::domain::value_objects::role_status::RoleStatus;
 use crate::infrastructure::db::entities::{permissions, role_permissions, roles};
 
 /// PostgreSQL-backed [`RoleRepository`].
@@ -38,11 +39,19 @@ impl SqlRoleRepository {
 // SeaORM Model -> domain Entity mapping
 // ---------------------------------------------------------------------------
 
-fn model_to_role(model: roles::Model) -> Role {
-    Role {
+fn model_to_role(model: roles::Model) -> RepositoryResult<Role> {
+    let status: RoleStatus = model.status.parse().map_err(|e| {
+        RepositoryError::Database(format!(
+            "invalid role status '{}' for role {}: {}",
+            model.status, model.id, e
+        ))
+    })?;
+
+    Ok(Role {
         id: model.id,
         name: model.name,
-        status: model.status,
+        status,
+        is_system: model.is_system,
         created_by: model.created_by,
         created_at: DateTime::<Utc>::from_naive_utc_and_offset(model.created_at, Utc),
         updated_by: model.updated_by,
@@ -51,7 +60,7 @@ fn model_to_role(model: roles::Model) -> Role {
         deleted_at: model
             .deleted_at
             .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
-    }
+    })
 }
 
 fn permission_model_to_entity(model: permissions::Model) -> Permission {
@@ -74,8 +83,9 @@ impl RoleRepository for SqlRoleRepository {
             .filter(roles::Column::DeletedAt.is_null())
             .one(&self.db)
             .await
-            .map_err(|e| RepositoryError::Database(e.to_string()))
-            .map(|opt| opt.map(model_to_role))
+            .map_err(|e| RepositoryError::Database(e.to_string()))?
+            .map(model_to_role)
+            .transpose()
     }
 
     async fn find_by_name(&self, name: &str) -> RepositoryResult<Option<Role>> {
@@ -87,40 +97,52 @@ impl RoleRepository for SqlRoleRepository {
             .filter(roles::Column::DeletedAt.is_null())
             .one(&self.db)
             .await
-            .map_err(|e| RepositoryError::Database(e.to_string()))
-            .map(|opt| opt.map(model_to_role))
+            .map_err(|e| RepositoryError::Database(e.to_string()))?
+            .map(model_to_role)
+            .transpose()
     }
 
     async fn save(&self, role: &Role) -> RepositoryResult<Role> {
         roles::ActiveModel {
             name: Set(role.name.clone()),
+            status: Set(role.status.to_string()),
+            is_system: Set(role.is_system),
             created_by: Set(role.created_by),
             updated_by: Set(role.updated_by),
             ..Default::default()
         }
         .insert(&self.db)
         .await
-        .map(model_to_role)
         .map_err(|e| RepositoryError::Database(e.to_string()))
+        .and_then(|m| model_to_role(m))
     }
 
     async fn update(&self, role: &Role) -> RepositoryResult<Role> {
-        // Verify the record exists and is not soft-deleted.
-        let _existing = self
-            .find_by_id(role.id)
-            .await?
+        // Read the current row to (a) verify it exists and is not soft-deleted,
+        // and (b) preserve the soft-delete state so a concurrent soft_delete
+        // cannot be accidentally reverted.
+        let existing = roles::Entity::find_by_id(role.id)
+            .filter(roles::Column::DeletedAt.is_null())
+            .one(&self.db)
+            .await
+            .map_err(|e| RepositoryError::Database(e.to_string()))?
             .ok_or(RepositoryError::NotFound)?;
 
         roles::ActiveModel {
             id: Set(role.id),
             name: Set(role.name.clone()),
+            status: Set(role.status.to_string()),
             updated_by: Set(role.updated_by),
+            // Preserve soft-delete state and is_system flag from the existing row.
+            deleted_at: Set(existing.deleted_at),
+            deleted_by: Set(existing.deleted_by),
+            is_system: Set(existing.is_system),
             ..Default::default()
         }
         .update(&self.db)
         .await
-        .map(model_to_role)
         .map_err(|e| RepositoryError::Database(e.to_string()))
+        .and_then(|m| model_to_role(m))
     }
 
     async fn find_all(&self, page: u32, limit: u32) -> RepositoryResult<(Vec<Role>, u64)> {
@@ -131,13 +153,13 @@ impl RoleRepository for SqlRoleRepository {
 
         let page_zero_based = page.saturating_sub(1) as u64;
 
-        let roles = paginator
+        let roles: Vec<Role> = paginator
             .fetch_page(page_zero_based)
             .await
             .map_err(|e| RepositoryError::Database(e.to_string()))?
             .into_iter()
             .map(model_to_role)
-            .collect();
+            .collect::<Result<Vec<_>, _>>()?;
 
         let count = paginator
             .num_items()
@@ -176,16 +198,20 @@ impl RoleRepository for SqlRoleRepository {
             return Err(RepositoryError::Database(e.to_string()));
         }
 
-        for perm_id in permission_ids {
-            let insert_result = role_permissions::ActiveModel {
-                role_id: Set(role_id),
-                permission_id: Set(*perm_id),
-                ..Default::default()
-            }
-            .insert(&txn)
-            .await;
+        if !permission_ids.is_empty() {
+            let models: Vec<role_permissions::ActiveModel> = permission_ids
+                .iter()
+                .map(|perm_id| role_permissions::ActiveModel {
+                    role_id: Set(role_id),
+                    permission_id: Set(*perm_id),
+                    ..Default::default()
+                })
+                .collect();
 
-            if let Err(e) = insert_result {
+            if let Err(e) = role_permissions::Entity::insert_many(models)
+                .exec(&txn)
+                .await
+            {
                 let _ = txn.rollback().await;
                 return Err(RepositoryError::Database(e.to_string()));
             }
