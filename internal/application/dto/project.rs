@@ -35,9 +35,10 @@ impl CreateProjectRequest {
             errors.push("name must not exceed 255 characters".to_string());
         }
         if let Some(ref desc) = self.description
-            && desc.len() > 2000 {
-                errors.push("description must not exceed 2000 characters".to_string());
-            }
+            && desc.len() > 2000
+        {
+            errors.push("description must not exceed 2000 characters".to_string());
+        }
         if !matches!(self.status.to_uppercase().as_str(), "ACTIVE" | "INACTIVE") {
             errors.push("status must be ACTIVE or INACTIVE".to_string());
         }
@@ -220,7 +221,7 @@ pub struct MemberResponse {
 }
 
 /// Summary returned after bulk member management.
-#[derive(Debug, Serialize)]
+#[allow(dead_code)]
 pub struct ManageMembersResponse {
     pub added: Vec<MemberResponse>,
     pub removed: Vec<i64>,

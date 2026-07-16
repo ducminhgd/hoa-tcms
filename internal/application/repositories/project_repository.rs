@@ -14,6 +14,16 @@ use crate::domain::entities::project::Project;
 /// can be called from async handlers behind `Arc<dyn ProjectRepository>`.
 #[async_trait]
 pub trait ProjectRepository: Send + Sync {
+    /// Create a project, add the creator as Owner member, and seed metadata —
+    /// all within a single database transaction.
+    ///
+    /// This is the primary creation path. Callers MUST use this method instead
+    /// of `insert` + manual member/seed calls to guarantee atomicity.
+    async fn create_project_transactional(
+        &self,
+        project: &crate::domain::entities::project::Project,
+        created_by: i64,
+    ) -> RepositoryResult<crate::domain::entities::project::Project>;
     /// Look up a project by primary key.
     ///
     /// Returns `None` when no active (non-deleted) project exists with the given `id`.

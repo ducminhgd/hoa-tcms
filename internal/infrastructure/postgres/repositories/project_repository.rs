@@ -7,24 +7,31 @@ use chrono::{DateTime, Utc};
 use sea_orm::sea_query::Expr;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
-    QueryOrder, QuerySelect, Set,
+    QueryOrder, QuerySelect, Set, TransactionTrait,
 };
 
 use crate::application::repositories::project_repository::ProjectRepository;
 use crate::application::repositories::{RepositoryError, RepositoryResult};
 use crate::domain::entities::project::Project;
 use crate::domain::value_objects::project_status::ProjectStatus;
-use crate::infrastructure::db::entities::projects;
+use crate::infrastructure::config::metadata_seeder::MetadataConfig;
+use crate::infrastructure::db::entities::{
+    project_members, projects, test_case_templates, test_categories,
+};
 
 /// PostgreSQL-backed [`ProjectRepository`].
 pub struct SqlProjectRepository {
     db: DatabaseConnection,
+    metadata_config: MetadataConfig,
 }
 
 impl SqlProjectRepository {
     /// Create a new repository bound to the given database connection.
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
+    pub fn new(db: DatabaseConnection, metadata_config: MetadataConfig) -> Self {
+        Self {
+            db,
+            metadata_config,
+        }
     }
 }
 
@@ -60,6 +67,91 @@ fn model_to_entity(model: projects::Model) -> RepositoryResult<Project> {
 
 #[async_trait]
 impl ProjectRepository for SqlProjectRepository {
+    async fn create_project_transactional(
+        &self,
+        project: &Project,
+        created_by: i64,
+    ) -> RepositoryResult<Project> {
+        let metadata = self.metadata_config.clone();
+
+        self.db
+            .transaction::<_, Project, RepositoryError>(|txn| {
+                let project = project.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    // 1. Insert project.
+                    let inserted = projects::ActiveModel {
+                        name: Set(project.name.clone()),
+                        description: Set(project.description.clone()),
+                        status: Set(project.status.to_string()),
+                        created_by: Set(project.created_by),
+                        updated_by: Set(project.updated_by),
+                        ..Default::default()
+                    }
+                    .insert(txn)
+                    .await
+                    .map_err(|e| {
+                        let msg = e.to_string();
+                        if msg.contains("uq_projects_name_lower") || msg.contains("duplicate key") {
+                            RepositoryError::Duplicate(format!(
+                                "a project with name '{}' already exists",
+                                project.name
+                            ))
+                        } else {
+                            RepositoryError::Database(msg)
+                        }
+                    })?;
+
+                    let project_id = inserted.id;
+
+                    // 2. Add creator as Owner member.
+                    project_members::ActiveModel {
+                        project_id: Set(project_id),
+                        user_id: Set(created_by),
+                        role: Set("Owner".to_string()),
+                        ..Default::default()
+                    }
+                    .insert(txn)
+                    .await
+                    .map_err(|e| RepositoryError::Database(e.to_string()))?;
+
+                    // 3. Seed categories.
+                    for cat in &metadata.categories {
+                        test_categories::ActiveModel {
+                            project_id: Set(project_id),
+                            name: Set(cat.name.clone()),
+                            description: Set(cat.description.clone()),
+                            created_by: Set(created_by),
+                            updated_by: Set(created_by),
+                            ..Default::default()
+                        }
+                        .insert(txn)
+                        .await
+                        .map_err(|e| RepositoryError::Database(e.to_string()))?;
+                    }
+
+                    // 4. Seed templates.
+                    for tmpl in &metadata.templates {
+                        test_case_templates::ActiveModel {
+                            project_id: Set(project_id),
+                            name: Set(tmpl.name.clone()),
+                            template_content: Set(tmpl.content.clone()),
+                            created_by: Set(created_by),
+                            updated_by: Set(created_by),
+                            ..Default::default()
+                        }
+                        .insert(txn)
+                        .await
+                        .map_err(|e| RepositoryError::Database(e.to_string()))?;
+                    }
+
+                    Ok(model_to_entity(inserted)?)
+                })
+            })
+            .await
+            .map_err(|e| RepositoryError::Database(e.to_string()))
+    }
+
     async fn find_by_id(&self, id: i64) -> RepositoryResult<Option<Project>> {
         projects::Entity::find_by_id(id)
             .filter(projects::Column::DeletedAt.is_null())
@@ -95,7 +187,17 @@ impl ProjectRepository for SqlProjectRepository {
         }
         .insert(&self.db)
         .await
-        .map_err(|e| RepositoryError::Database(e.to_string()))
+        .map_err(|e| {
+            let msg = e.to_string();
+            if msg.contains("uq_projects_name_lower") || msg.contains("duplicate key") {
+                RepositoryError::Duplicate(format!(
+                    "a project with name '{}' already exists",
+                    project.name
+                ))
+            } else {
+                RepositoryError::Database(msg)
+            }
+        })
         .and_then(model_to_entity)
     }
 

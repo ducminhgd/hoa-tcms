@@ -90,7 +90,7 @@ impl ProjectHandler {
                 name: p.name,
                 description: p.description,
                 status: p.status.to_string(),
-                member_count: 0, // populated below if needed
+                member_count: 0, // not computed in list view; use GET /projects/{id} for member details
                 created_by: p.created_by,
                 created_at: p.created_at,
                 updated_at: p.updated_at,

@@ -13,27 +13,27 @@ use crate::infrastructure::db::entities::{test_case_templates, test_categories};
 
 /// YAML structure for a single category.
 #[derive(Debug, Clone, Deserialize)]
-struct CategoryConfig {
-    name: String,
+pub struct CategoryConfig {
+    pub name: String,
     #[serde(default)]
-    description: Option<String>,
+    pub description: Option<String>,
 }
 
 /// YAML structure for a single template.
 #[derive(Debug, Clone, Deserialize)]
-struct TemplateConfig {
-    name: String,
+pub struct TemplateConfig {
+    pub name: String,
     #[serde(default)]
-    content: Option<String>,
+    pub content: Option<String>,
 }
 
 /// Root structure of the default-metadata.yaml file.
 #[derive(Debug, Clone, Deserialize)]
-struct MetadataConfig {
+pub struct MetadataConfig {
     #[serde(default)]
-    categories: Vec<CategoryConfig>,
+    pub categories: Vec<CategoryConfig>,
     #[serde(default)]
-    templates: Vec<TemplateConfig>,
+    pub templates: Vec<TemplateConfig>,
 }
 
 /// Seeds per-project metadata from a YAML configuration file.
@@ -78,7 +78,22 @@ impl ConfigFileSeeder {
         Self { db, config }
     }
 
-    fn load_config(path: &str) -> Result<MetadataConfig, String> {
+    /// Return an empty metadata configuration (no categories or templates).
+    ///
+    /// Used as a fallback when the config file cannot be loaded.
+    pub fn empty_config() -> MetadataConfig {
+        MetadataConfig {
+            categories: Vec::new(),
+            templates: Vec::new(),
+        }
+    }
+
+    /// Load and parse the metadata config from a YAML file.
+    ///
+    /// Returns the parsed config or an error string describing the problem.
+    /// This is public so callers (e.g., main.rs) can preload the config for
+    /// injection into other components that need it.
+    pub fn load_config(path: &str) -> Result<MetadataConfig, String> {
         let contents =
             std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {}", path, e))?;
 

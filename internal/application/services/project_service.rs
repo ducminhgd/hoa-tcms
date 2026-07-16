@@ -4,7 +4,6 @@
 //! the repository layer, and returns domain entities or DTOs. This service is
 //! agnostic to HTTP or database details.
 
-use crate::application::repositories::metadata_seeder::MetadataSeeder;
 use crate::application::repositories::project_member_repository::{
     ProjectMemberRepository, ProjectMemberRow,
 };
@@ -19,7 +18,6 @@ use crate::domain::value_objects::project_status::ProjectStatus;
 pub struct ProjectService {
     project_repo: Box<dyn ProjectRepository>,
     member_repo: Box<dyn ProjectMemberRepository>,
-    seeder: Box<dyn MetadataSeeder>,
     auth: std::sync::Arc<AuthorizationService>,
 }
 
@@ -28,13 +26,12 @@ impl ProjectService {
     pub fn new(
         project_repo: Box<dyn ProjectRepository>,
         member_repo: Box<dyn ProjectMemberRepository>,
-        seeder: Box<dyn MetadataSeeder>,
+        _seeder: Box<dyn crate::application::repositories::metadata_seeder::MetadataSeeder>,
         auth: std::sync::Arc<AuthorizationService>,
     ) -> Self {
         Self {
             project_repo,
             member_repo,
-            seeder,
             auth,
         }
     }
@@ -47,8 +44,8 @@ impl ProjectService {
     ///
     /// The caller must hold the `project:create` system permission.
     /// The creator is automatically added as the Owner member.
-    /// All operations run in the same conceptual transaction (caller
-    /// is responsible for wrapping in a DB transaction if needed).
+    /// All operations (insert project, add member, seed metadata) run in a
+    /// single database transaction — any failure rolls back the entire creation.
     pub async fn create_project(
         &self,
         name: String,
@@ -65,7 +62,7 @@ impl ProjectService {
             return Err(ServiceError::PermissionDenied("forbidden".into()));
         }
 
-        // Duplicate name check.
+        // Duplicate name check (best-effort; DB UNIQUE constraint is the safety net).
         if self
             .project_repo
             .find_by_name(&name)
@@ -80,26 +77,11 @@ impl ProjectService {
 
         let project = Project::create(name, description, status, created_by);
 
-        // Insert project.
-        let saved = self
-            .project_repo
-            .insert(&project)
+        // Single atomic operation: insert project + add Owner + seed metadata.
+        self.project_repo
+            .create_project_transactional(&project, created_by)
             .await
-            .map_err(ServiceError::from)?;
-
-        // Add creator as Owner.
-        self.member_repo
-            .add_member(saved.id, created_by, "Owner")
-            .await
-            .map_err(ServiceError::from)?;
-
-        // Seed metadata from config.
-        self.seeder
-            .seed(saved.id, created_by)
-            .await
-            .map_err(ServiceError::from)?;
-
-        Ok(saved)
+            .map_err(ServiceError::from)
     }
 
     /// List projects the user is a member of (or all projects for System Admin).
@@ -224,11 +206,11 @@ impl ProjectService {
                     .await
                     .map_err(ServiceError::from)?
                     .is_some()
-                {
-                    return Err(ServiceError::Conflict(
-                        "a project with that name already exists".into(),
-                    ));
-                }
+            {
+                return Err(ServiceError::Conflict(
+                    "a project with that name already exists".into(),
+                ));
+            }
             project.name = new_name.clone();
         }
 
@@ -322,7 +304,7 @@ impl ProjectService {
     /// Bulk add and/or remove members from a project.
     ///
     /// Requires `project:update` system permission AND Owner role on the project.
-    /// Removals are processed before additions.
+    /// Removals are processed before additions. Last-owner removal is rejected.
     pub async fn manage_members(
         &self,
         project_id: i64,
@@ -351,6 +333,37 @@ impl ProjectService {
             match member {
                 Some(m) if m.role == "Owner" => {}
                 _ => return Err(ServiceError::PermissionDenied("forbidden".into())),
+            }
+        }
+
+        // Validate roles in add_entries at the service layer.
+        for (i, entry) in add_entries.iter().enumerate() {
+            if MemberRole::from_str(&entry.role).is_none() {
+                return Err(ServiceError::Validation(format!(
+                    "add[{}].role must be one of: Owner, Editor, Contributor, Viewer",
+                    i
+                )));
+            }
+        }
+
+        // Last-owner protection: check before any removals.
+        if !remove_ids.is_empty() {
+            let owner_count = self.member_repo.count_by_role(project_id, "Owner").await?;
+
+            // Count how many of the removed users are currently Owners.
+            let mut removing_owner_count = 0u64;
+            for &uid in remove_ids {
+                if let Some(member) = self.member_repo.get_member(project_id, uid).await? {
+                    if member.role == "Owner" {
+                        removing_owner_count += 1;
+                    }
+                }
+            }
+
+            if removing_owner_count >= owner_count {
+                return Err(ServiceError::Conflict(
+                    "cannot remove the last project owner".into(),
+                ));
             }
         }
 
@@ -396,6 +409,14 @@ impl ProjectService {
             .await?
         {
             return Err(ServiceError::PermissionDenied("forbidden".into()));
+        }
+
+        // Validate role at the service layer.
+        if MemberRole::from_str(new_role).is_none() {
+            return Err(ServiceError::Validation(format!(
+                "role must be one of: Owner, Editor, Contributor, Viewer, got '{}'",
+                new_role
+            )));
         }
 
         // Verify project exists.

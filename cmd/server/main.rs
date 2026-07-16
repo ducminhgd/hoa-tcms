@@ -132,13 +132,20 @@ async fn main() -> std::io::Result<()> {
         admin_bypass_repo,
     ));
 
-    // Repositories.
-    let project_repo = Box::new(SqlProjectRepository::new(db.clone()));
-    let member_repo = Box::new(SqlProjectMemberRepository::new(db.clone()));
-
-    // Config seeder.
+    // Load metadata config (used by both seeder and project repository).
     let config_path = std::env::var("METADATA_CONFIG_PATH")
         .unwrap_or_else(|_| "config/default-metadata.yaml".to_string());
+    let metadata_config = ConfigFileSeeder::load_config(&config_path).unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "failed to load metadata config; using empty defaults");
+        ConfigFileSeeder::empty_config()
+    });
+
+    // Repositories.
+    let project_repo = Box::new(SqlProjectRepository::new(db.clone(), metadata_config));
+    let member_repo = Box::new(SqlProjectMemberRepository::new(db.clone()));
+
+    // Config seeder (no longer used for create — create_project_transactional handles seeding).
+    // Kept for potential standalone seeding operations.
     let seeder = Box::new(ConfigFileSeeder::new(db.clone(), &config_path).await);
 
     // Project service.
