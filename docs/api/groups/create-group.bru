@@ -1,0 +1,28 @@
+meta {
+  name: Create Group
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/groups
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "QA Engineers",
+    "description": "Quality assurance team members"
+  }
+}
+
+docs {
+  # Create Group
+
+  Creates a new group. Requires `group:create` permission.
+
+  - `201 Created` — group created, `Location` header set
+  - `409 Conflict` — group name already taken
+  - `422 Unprocessable Entity` — validation error
+}

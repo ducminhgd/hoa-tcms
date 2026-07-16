@@ -1,0 +1,29 @@
+meta {
+  name: Manage Group Roles
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/api/v1/groups/{{groupId}}/roles
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "role_ids": [1, 2]
+  }
+}
+
+docs {
+  # Manage Group Roles
+
+  Full replacement of a group's role assignments. Requires `group:manage` permission.
+
+  Pass an empty array `[]` to remove all role assignments.
+
+  - `200 OK` — role assignments replaced
+  - `404 Not Found` — group does not exist
+  - `422 Unprocessable Entity` — one or more role IDs do not exist
+}

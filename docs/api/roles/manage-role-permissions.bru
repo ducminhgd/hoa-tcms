@@ -1,0 +1,31 @@
+meta {
+  name: Manage Role Permissions
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/v1/roles/{{roleId}}/permissions
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "permission_ids": [1, 2, 3]
+  }
+}
+
+docs {
+  # Manage Role Permissions
+
+  Atomically replace the permission set assigned to a role.
+  Requires `role:update` permission.
+
+  Pass an empty array `[]` to remove all permissions.
+  System roles (where `is_system = true`) cannot be modified.
+
+  - `200 OK` — permission set replaced
+  - `403 Forbidden` — cannot modify a system role
+  - `404 Not Found` — role does not exist
+}

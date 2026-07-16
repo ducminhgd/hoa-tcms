@@ -1,0 +1,20 @@
+meta {
+  name: Get Permission
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/permissions/{{permissionCode}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get Permission
+
+  Returns a single permission by its machine-readable code (e.g. `user:create`).
+
+  - `200 OK`
+  - `404 Not Found`
+}

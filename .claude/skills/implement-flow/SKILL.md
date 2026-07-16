@@ -59,7 +59,7 @@ ROUND 2: RE-REVIEW  → reviewer approves/rejects each fix
          ↓
 ...repeat until 0 unresolved findings...
          ↓
-FINALIZE            → coder applies all approved fixes
+FINALIZE            → coder applies all approved fixes & update the bruno sample requests
 ```
 
 ## Protocol

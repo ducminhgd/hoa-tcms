@@ -1,0 +1,28 @@
+meta {
+  name: Create Role
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/roles
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Test Manager",
+    "permission_ids": [1, 2, 3]
+  }
+}
+
+docs {
+  # Create Role
+
+  Creates a new role with an initial set of permissions. Requires `role:create` permission.
+
+  - `201 Created` — role created, `Location` header set
+  - `409 Conflict` — role name already taken
+  - `422 Unprocessable Entity` — validation error
+}
