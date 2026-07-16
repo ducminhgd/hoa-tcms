@@ -15,7 +15,7 @@ Tasks ordered by dependency. All tasks reference their source section in either
     wrapper `PermissionsResponse { data, meta }`.
   - References: requirements.md#US-2, requirements.md#US-4, design.md#Components
 
-- [ ] **2. Create the seed migration** — design.md#Data-Model
+- [x] **2. Create the seed migration** — design.md#Data-Model
   - Create migration file `V2__seed_permissions.sql` containing:
     - `CREATE TABLE permissions (...)` with `id`, `name`, `code`, `created_at`.
     - `CREATE UNIQUE INDEX uq_permissions_code ON permissions (code)`.
