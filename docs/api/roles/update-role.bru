@@ -1,0 +1,33 @@
+meta {
+  name: Update Role
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/roles/{{roleId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Senior Test Manager",
+    "permission_ids": [1, 2, 3, 4]
+  }
+}
+
+docs {
+  # Update Role
+
+  Partial update of a role. Requires `role:update` permission.
+
+  All fields are optional — only provided fields will be updated.
+  Passing `"permission_ids": []` clears all permissions.
+  System roles (where `is_system = true`) cannot be modified.
+
+  - `200 OK`
+  - `403 Forbidden` — cannot modify a system role
+  - `404 Not Found`
+  - `422 Unprocessable Entity` — validation error
+}

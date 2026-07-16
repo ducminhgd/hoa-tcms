@@ -1,0 +1,21 @@
+meta {
+  name: Get User Roles
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/{{userId}}/roles
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get User Roles
+
+  Returns the roles directly assigned to a user (excluding those inherited
+  through group membership).
+
+  - `200 OK`
+  - `404 Not Found` — user does not exist
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Get Group
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/groups/{{groupId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get Group
+
+  Returns a single group by ID, including members and role assignments.
+
+  - `200 OK`
+  - `404 Not Found`
+}

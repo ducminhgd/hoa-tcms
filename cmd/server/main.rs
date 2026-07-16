@@ -6,6 +6,7 @@
 //! so all handlers can access it via `web::Data<AppState>`.
 
 use actix_web::web;
+use sea_orm::SqlxPostgresConnector;
 use std::net::TcpListener;
 use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
@@ -84,6 +85,13 @@ async fn main() -> std::io::Result<()> {
     info!(max_connections, "database connection pool established");
 
     // -----------------------------------------------------------------------
+    // Create SeaORM connection wrapper around the PgPool.
+    // -----------------------------------------------------------------------
+    let db = SqlxPostgresConnector::from_sqlx_postgres_pool(pool.clone());
+
+    info!("SeaORM connection wrapper created");
+
+    // -----------------------------------------------------------------------
     // Create Redis client.
     // -----------------------------------------------------------------------
     let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL must be set");
@@ -96,7 +104,11 @@ async fn main() -> std::io::Result<()> {
     // -----------------------------------------------------------------------
     // Build and run the server with shared application state.
     // -----------------------------------------------------------------------
-    let app_state = web::Data::new(AppState { pool, redis_client });
+    let app_state = web::Data::new(AppState {
+        pool,
+        db,
+        redis_client,
+    });
 
     actix_web::HttpServer::new(move || {
         actix_web::App::new()

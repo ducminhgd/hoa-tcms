@@ -5,7 +5,18 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/v1/permissions
+  url: {{baseUrl}}/api/v1/permissions?page=1&limit=100
   body: none
   auth: inherit
+}
+
+docs {
+  # List Permissions
+
+  Returns a paginated list of all permissions. Permissions are **read-only**
+  — they are seeded by migrations and never modified through the API.
+
+  Query params: `page`, `limit` (max 100)
+
+  - `200 OK`
 }

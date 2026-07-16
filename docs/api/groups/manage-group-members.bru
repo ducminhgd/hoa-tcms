@@ -1,0 +1,29 @@
+meta {
+  name: Manage Group Members
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/api/v1/groups/{{groupId}}/members
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "user_ids": [1, 2, 3]
+  }
+}
+
+docs {
+  # Manage Group Members
+
+  Full replacement of a group's member list. Requires `group:manage` permission.
+
+  Pass an empty array `[]` to remove all members.
+
+  - `200 OK` — member list replaced
+  - `404 Not Found` — group does not exist
+  - `422 Unprocessable Entity` — one or more user IDs do not exist
+}

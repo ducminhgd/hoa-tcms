@@ -1,0 +1,20 @@
+meta {
+  name: Get Role
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/roles/{{roleId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get Role
+
+  Returns a single role by ID, including its assigned permissions.
+
+  - `200 OK`
+  - `404 Not Found`
+}

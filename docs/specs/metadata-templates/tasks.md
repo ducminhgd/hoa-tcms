@@ -190,7 +190,7 @@ of work that maps to one or more requirements or design sections.
 
 ## Layer 4 -- Infrastructure
 
-- [ ] 10. Create `TEST_CASE_TEMPLATES` database migration -- `design.md#Data Model`
+- [x] 10. Create `TEST_CASE_TEMPLATES` database migration -- `design.md#Data Model`
   - Table definition with all columns, PK, FKs, constraints
   - `CHECK` constraint on `description`: `description IS NULL OR char_length(description) <= 10000`
   - Partial unique index `uq_test_case_templates_name_project` on `(project_id, LOWER(name))`
