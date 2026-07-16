@@ -38,8 +38,8 @@ impl AdminBypassRepository for SqlAdminBypassRepository {
         // system-protected role (is_system = TRUE) either:
         //   1. Through direct role assignment (user_roles → roles), OR
         //   2. Through group membership (user_groups → groups → group_roles → roles).
-        let result: Option<IsSystemAdmin> = IsSystemAdmin::find_by_statement(
-            Statement::from_sql_and_values(
+        let result: Option<IsSystemAdmin> =
+            IsSystemAdmin::find_by_statement(Statement::from_sql_and_values(
                 self.db.get_database_backend(),
                 r#"
                 SELECT EXISTS(
@@ -68,11 +68,10 @@ impl AdminBypassRepository for SqlAdminBypassRepository {
                 ) AS is_system_admin
                 "#,
                 [user_id.into()],
-            ),
-        )
-        .one(&self.db)
-        .await
-        .map_err(|e| RepositoryError::Database(e.to_string()))?;
+            ))
+            .one(&self.db)
+            .await
+            .map_err(|e| RepositoryError::Database(e.to_string()))?;
 
         Ok(result.map(|r| r.is_system_admin).unwrap_or(false))
     }
