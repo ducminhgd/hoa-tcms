@@ -151,7 +151,7 @@ Spawn coder one last time:
 
 ```
 Agent "Apply all accepted fixes: <list of ACCEPTED proposals>.
-Implement the exact changes. Do not introduce anything new."
+Implement the exact changes. Do not introduce anything new. Make sure code lines are formatted, run `make fmt` and fix"
 ```
 
 Then spawn reviewer for final sign-off:
