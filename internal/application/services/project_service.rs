@@ -183,7 +183,7 @@ impl ProjectService {
             let member = self.member_repo.get_member(project_id, user_id).await?;
             match member {
                 Some(m) => {
-                    let role = MemberRole::from_str(&m.role)
+                    let role = MemberRole::parse(&m.role)
                         .ok_or_else(|| ServiceError::Internal("invalid member role".into()))?;
                     if !matches!(role, MemberRole::Owner | MemberRole::Editor) {
                         return Err(ServiceError::PermissionDenied("forbidden".into()));
@@ -215,7 +215,7 @@ impl ProjectService {
         }
 
         if let Some(ref new_status) = status {
-            project.status = ProjectStatus::from_str(new_status)
+            project.status = ProjectStatus::parse(new_status)
                 .ok_or_else(|| ServiceError::Validation("invalid status".into()))?;
         }
 
@@ -338,7 +338,7 @@ impl ProjectService {
 
         // Validate roles in add_entries at the service layer.
         for (i, entry) in add_entries.iter().enumerate() {
-            if MemberRole::from_str(&entry.role).is_none() {
+            if MemberRole::parse(&entry.role).is_none() {
                 return Err(ServiceError::Validation(format!(
                     "add[{}].role must be one of: Owner, Editor, Contributor, Viewer",
                     i
@@ -353,10 +353,10 @@ impl ProjectService {
             // Count how many of the removed users are currently Owners.
             let mut removing_owner_count = 0u64;
             for &uid in remove_ids {
-                if let Some(member) = self.member_repo.get_member(project_id, uid).await? {
-                    if member.role == "Owner" {
-                        removing_owner_count += 1;
-                    }
+                if let Some(member) = self.member_repo.get_member(project_id, uid).await?
+                    && member.role == "Owner"
+                {
+                    removing_owner_count += 1;
                 }
             }
 
@@ -412,7 +412,7 @@ impl ProjectService {
         }
 
         // Validate role at the service layer.
-        if MemberRole::from_str(new_role).is_none() {
+        if MemberRole::parse(new_role).is_none() {
             return Err(ServiceError::Validation(format!(
                 "role must be one of: Owner, Editor, Contributor, Viewer, got '{}'",
                 new_role

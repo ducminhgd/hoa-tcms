@@ -129,7 +129,7 @@ impl ProjectHandler {
                 .json(ApiError::validation("validation error", details));
         }
 
-        let status = ProjectStatus::from_str(&body.status).unwrap_or(ProjectStatus::Active);
+        let status = ProjectStatus::parse(&body.status).unwrap_or(ProjectStatus::Active);
 
         match self
             .service

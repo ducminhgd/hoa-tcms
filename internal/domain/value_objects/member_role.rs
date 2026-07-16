@@ -4,6 +4,7 @@
 //! a user can perform on project-scoped objects.
 
 use std::fmt;
+use std::str::FromStr;
 
 /// The role a user has on a project.
 ///
@@ -24,7 +25,7 @@ impl MemberRole {
     /// Parse a string into a `MemberRole`.
     ///
     /// Matching is case-insensitive. Returns `None` for unrecognised values.
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "viewer" => Some(Self::Viewer),
             "contributor" => Some(Self::Contributor),
@@ -63,5 +64,25 @@ impl MemberRole {
 impl fmt::Display for MemberRole {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
+    }
+}
+
+/// Error returned when parsing an invalid role string.
+#[derive(Debug, Clone)]
+pub struct InvalidMemberRole(pub String);
+
+impl fmt::Display for InvalidMemberRole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid member role: {}", self.0)
+    }
+}
+
+impl std::error::Error for InvalidMemberRole {}
+
+impl FromStr for MemberRole {
+    type Err = InvalidMemberRole;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s).ok_or_else(|| InvalidMemberRole(s.to_string()))
     }
 }

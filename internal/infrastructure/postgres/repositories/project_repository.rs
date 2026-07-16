@@ -40,7 +40,7 @@ impl SqlProjectRepository {
 // ---------------------------------------------------------------------------
 
 fn model_to_entity(model: projects::Model) -> RepositoryResult<Project> {
-    let status = ProjectStatus::from_str(&model.status).ok_or_else(|| {
+    let status = ProjectStatus::parse(&model.status).ok_or_else(|| {
         RepositoryError::Database(format!(
             "invalid project status '{}' for project {}",
             model.status, model.id
@@ -145,7 +145,7 @@ impl ProjectRepository for SqlProjectRepository {
                         .map_err(|e| RepositoryError::Database(e.to_string()))?;
                     }
 
-                    Ok(model_to_entity(inserted)?)
+                    model_to_entity(inserted)
                 })
             })
             .await
