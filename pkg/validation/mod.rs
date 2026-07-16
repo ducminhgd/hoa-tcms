@@ -9,10 +9,14 @@ pub fn validate_email(email: &str) -> Result<(), ValidationError> {
         return Err(ValidationError("email must not be empty".into()));
     }
     if email.len() > 254 {
-        return Err(ValidationError("email must not exceed 254 characters".into()));
+        return Err(ValidationError(
+            "email must not exceed 254 characters".into(),
+        ));
     }
     if !email.validate_email() {
-        return Err(ValidationError("email must be a valid email address".into()));
+        return Err(ValidationError(
+            "email must be a valid email address".into(),
+        ));
     }
     Ok(())
 }
@@ -20,10 +24,14 @@ pub fn validate_email(email: &str) -> Result<(), ValidationError> {
 /// Validate password strength.
 pub fn validate_password(password: &str) -> Result<(), ValidationError> {
     if password.len() < 8 {
-        return Err(ValidationError("password must be at least 8 characters".into()));
+        return Err(ValidationError(
+            "password must be at least 8 characters".into(),
+        ));
     }
     if password.len() > 128 {
-        return Err(ValidationError("password must not exceed 128 characters".into()));
+        return Err(ValidationError(
+            "password must not exceed 128 characters".into(),
+        ));
     }
     Ok(())
 }
