@@ -1,0 +1,20 @@
+meta {
+  name: Create Test Case
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/test-cases
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "summary": "Login with valid credentials",
+    "projectId": "1",
+    "priority": "HIGH",
+    "description": "**Preconditions:** ...\n\n**Steps:** ...\n\n**Expected Results:** ..."
+  }
+}

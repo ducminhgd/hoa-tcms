@@ -1,0 +1,62 @@
+[workspace]
+members = [
+    "cmd/server",
+    "internal",
+    "pkg",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+description = "HOA Test Case Management System"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP server
+actix-web = "4"
+actix-files = "0.6"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "json"] }
+
+# Redis
+redis = { version = "0.27", features = ["tokio-comp"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Error handling
+thiserror = "2"
+
+# Session
+actix-session = "0.10"
+
+# Password hashing
+pbkdf2 = "0.12"
+hmac = "0.12"
+sha2 = "0.10"
+password-hash = "0.5"
+
+# Config
+config = "0.15"
+
+# Logging / tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["std", "env-filter"] }
+tracing-actix-web = "0.7"
+
+# Validation
+validator = { version = "0.19", features = ["derive"] }
+
+# Environment
+dotenvy = "0.15"

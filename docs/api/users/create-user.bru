@@ -1,0 +1,30 @@
+meta {
+  name: Create User
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/users
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "username": "jdoe",
+    "email": "jdoe@example.com",
+    "password": "s3cur3P@ss!",
+    "fullname": "John Doe"
+  }
+}
+
+docs {
+  # Create User
+
+  Creates a new user. Requires `user:create` permission.
+
+  - `201 Created` — user created, `Location` header set
+  - `409 Conflict` — username or email already taken
+  - `422 Unprocessable Entity` — validation error
+}

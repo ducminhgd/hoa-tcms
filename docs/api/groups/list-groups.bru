@@ -1,0 +1,11 @@
+meta {
+  name: List Groups
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/groups?page=1&limit=25
+  body: none
+  auth: inherit
+}

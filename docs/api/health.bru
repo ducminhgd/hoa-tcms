@@ -1,0 +1,25 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/health
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq ok
+}
+
+docs {
+  # Health Check
+
+  Verifies database and Redis connectivity.
+
+  - `200 OK` — all dependencies healthy
+  - `503 Service Unavailable` — one or more dependencies unreachable
+}

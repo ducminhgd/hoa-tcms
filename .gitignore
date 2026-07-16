@@ -21,3 +21,13 @@ target
 #.idea/
 
 .DS_Store
+
+# Added by cargo
+
+/target
+
+# Environment configuration (contains secrets)
+.env
+
+# File storage uploads
+storage/uploads/

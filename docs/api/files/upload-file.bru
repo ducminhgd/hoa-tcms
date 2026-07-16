@@ -1,0 +1,17 @@
+meta {
+  name: Upload File
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/files
+  body: multipart-form
+  auth: inherit
+}
+
+body:multipart-form {
+  file: @/path/to/attachment.png
+  ownerType: test_case
+  ownerId: 1
+}

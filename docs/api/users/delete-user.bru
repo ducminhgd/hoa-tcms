@@ -1,0 +1,20 @@
+meta {
+  name: Delete User
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/users/{{userId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Delete User
+
+  Soft-deletes a user. Requires `user:delete` permission.
+
+  - `204 No Content`
+  - `404 Not Found`
+}
