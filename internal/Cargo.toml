@@ -1,0 +1,24 @@
+[package]
+name = "hoa-tcms-core"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+
+[dependencies]
+hoa-tcms-pkg = { path = "../pkg" }
+
+actix-web.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+sqlx.workspace = true
+redis.workspace = true
+tokio.workspace = true
+config.workspace = true
+
+[lib]
+name = "hoa_tcms_core"
+path = "lib.rs"

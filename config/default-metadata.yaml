@@ -1,0 +1,79 @@
+# HOA TCMS — Default Metadata Configuration
+#
+# This file defines pre-seeded metadata that is copied into every new project
+# at creation time. Administrators can customise the defaults before project
+# creation by editing this file.
+#
+# Changes to this file only affect projects created *after* the change.
+# Existing projects retain their own copies.
+
+# ------------------------------------------------------------------
+# Priority levels
+# ------------------------------------------------------------------
+# Each project gets exactly 5 priority levels. The order matters for
+# sorting — first is highest, last is lowest.
+priorities:
+  - HIGHEST
+  - HIGH
+  - MEDIUM
+  - LOW
+  - LOWEST
+
+# ------------------------------------------------------------------
+# Test case categories
+# ------------------------------------------------------------------
+# Each category has a name (required) and an optional description.
+categories:
+  - name: "Functional"
+    description: "Functional test cases"
+  - name: "Performance"
+    description: "Performance test cases"
+  - name: "Security"
+    description: "Security test cases"
+  - name: "Integration"
+    description: "Integration test cases"
+  - name: "Regression"
+    description: "Regression test cases"
+
+# ------------------------------------------------------------------
+# Test case templates
+# ------------------------------------------------------------------
+# Templates provide structured starting points for test case descriptions.
+# Content is Markdown-like rich text. Templates are per-project.
+templates:
+  - name: "Standard"
+    content: |
+      **Preconditions:**
+
+      **Steps:**
+      1.
+
+      **Expected Results:**
+      1.
+
+  - name: "Login Test"
+    content: |
+      **Preconditions:**
+      - User account exists
+
+      **Steps:**
+      1. Navigate to login page
+      2. Enter credentials
+      3. Click Login
+
+      **Expected Results:**
+      1. User is authenticated and redirected
+
+# ------------------------------------------------------------------
+# Test plan types
+# ------------------------------------------------------------------
+# Each type is a string identifier stored as JSONB on the test_plans row.
+# The full list is seeded for every project.
+test_plan_types:
+  - ACCEPTANCE
+  - FUNCTIONAL
+  - API
+  - INTEGRATION
+  - PERFORMANCE
+  - REGRESSION
+  - SECURITY
