@@ -9,7 +9,7 @@
 
 ## Database Layer -- Shared Trigger Functions
 
-- [x] 1. **Create migration for shared trigger functions** -- `design.md#trigger-functions`
+- [ ] 1. **Create migration for shared trigger functions** -- `design.md#trigger-functions`
   - Create the first migration (`001_create_trigger_functions.sql`) that must run
     before any entity table migration.
   - Implement `fn_audit_update()`:
@@ -32,7 +32,7 @@
 
 ## Database Layer -- Per-Table Trigger Template
 
-- [x] 2. **Create migration helper for per-table triggers** -- `design.md#Per-Table Trigger Registration`
+- [ ] 2. **Create migration helper for per-table triggers** -- `design.md#Per-Table Trigger Registration`
   - Document the SQL template for per-table triggers:
     ```sql
     CREATE TRIGGER trg_{table}_audit_immutability

@@ -3,7 +3,7 @@
 use thiserror::Error;
 
 /// Generic domain error.
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[derive(Error, Debug)]
 pub enum DomainError {
     /// The requested entity was not found.
     #[error("not found: {0}")]
@@ -28,21 +28,4 @@ pub enum DomainError {
     /// The operation is not supported.
     #[error("unsupported operation: {0}")]
     Unsupported(String),
-
-    // ── IAM variants (Milestone 2) ──────────────────────────────────────
-    /// Authentication failed; wrong username or password.
-    #[error("authentication failed: {0}")]
-    AuthenticationFailed(String),
-
-    /// User account is deactivated.
-    #[error("user inactive: {0}")]
-    UserInactive(String),
-
-    /// Session not found or expired.
-    #[error("session expired: {0}")]
-    SessionExpired(String),
-
-    /// Cannot modify a protected role (e.g. System Admin).
-    #[error("role protected: {0}")]
-    RoleProtected(String),
 }

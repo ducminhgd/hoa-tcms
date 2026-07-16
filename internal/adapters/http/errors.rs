@@ -12,7 +12,6 @@ impl From<RepositoryError> for ApiError {
     fn from(err: RepositoryError) -> Self {
         match err {
             RepositoryError::NotFound => ApiError::not_found("resource not found"),
-            RepositoryError::Forbidden(msg) => ApiError::forbidden(msg),
             RepositoryError::Duplicate(msg) => ApiError::conflict(msg),
             RepositoryError::Database(details) => {
                 tracing::error!(
