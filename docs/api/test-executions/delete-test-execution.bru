@@ -1,0 +1,23 @@
+meta {
+  name: Delete Test Execution
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/test-executions/1
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Delete Test Execution
+
+  Soft-deletes a test execution by setting `deleted_at` and `deleted_by`. The execution and its
+  associated test case results are hidden from views but preserved in the database.
+  Requires `test_execution:delete` permission.
+
+  - `204 No Content` — execution soft-deleted
+  - `403 Forbidden` — missing permission or access denied
+  - `404 Not Found` — execution does not exist or is already soft-deleted
+}

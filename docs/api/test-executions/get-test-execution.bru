@@ -1,0 +1,24 @@
+meta {
+  name: Get Test Execution
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/test-executions/1
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get Test Execution Detail
+
+  Returns full test execution details including tester info (user_id, username, fullname).
+  Requires `test_execution:read` permission. User must be the creator, a tester, or a member
+  of the project that owns the test run (or System Admin).
+
+  - `200 OK` — execution with tester info and test case results
+  - `401 Unauthorized` — not authenticated
+  - `403 Forbidden` — missing permission or access denied
+  - `404 Not Found` — execution does not exist or is soft-deleted
+}

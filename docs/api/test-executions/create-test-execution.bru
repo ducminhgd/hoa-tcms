@@ -1,0 +1,32 @@
+meta {
+  name: Create Test Execution
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/test-executions
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Build 3.2.1 Execution",
+    "test_run_id": 1,
+    "tester_ids": [2, 3]
+  }
+}
+
+docs {
+  # Create Test Execution
+
+  Creates a new test execution linked to a required test run. Requires `test_execution:create`
+  permission. The test run must exist and not be soft-deleted. Testers are optional and can be
+  assigned at creation time.
+
+  - `201 Created` — execution created, `Location` header set to the new resource
+  - `403 Forbidden` — missing permission or access denied
+  - `404 Not Found` — test_run_id does not exist
+  - `422 Unprocessable Entity` — validation error (name empty, test_run_id missing or invalid)
+}

@@ -1,0 +1,40 @@
+meta {
+  name: Import Test Cases
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/test-executions/1/import-cases
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "case_ids": [1, 2, 3]
+  }
+}
+
+docs {
+  # Import Test Cases into Execution
+
+  Atomically imports test cases from the execution's test run into the execution as
+  `TestCaseResult` records. Requires `test_execution:update` permission.
+
+  - **First import**: Creates a new TestCaseResult with a snapshot of the test case's summary,
+    description, and priority. Result status defaults to `NOT_TESTED`.
+  - **Re-import**: Refreshes snapshot fields (summary, description, priority) from the current
+    source test case but **preserves** existing result status, logs, and `tested_by`.
+  - **Validation**: All case_ids must belong to the execution's test run (via `test_run_cases`).
+    Non-matching case_ids are rejected with a validation error.
+  - **Atomicity**: All imports run in a single database transaction — partial failures are
+    rolled back.
+
+  Returns `{ "imported_count": N, "refreshed_count": M }`.
+
+  - `200 OK` — import completed
+  - `403 Forbidden` — missing permission or access denied
+  - `404 Not Found` — execution does not exist
+  - `422 Unprocessable Entity` — case_ids empty, or a case does not belong to the test run
+}
