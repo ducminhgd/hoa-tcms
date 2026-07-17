@@ -9,5 +9,7 @@ pub mod group_role_repository;
 pub mod member_repository;
 pub mod permission_repository;
 pub mod permission_resolver;
+pub mod project_member_repository;
+pub mod project_repository;
 pub mod role_repository;
 pub mod user_repository;

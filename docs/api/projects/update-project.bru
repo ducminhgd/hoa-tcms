@@ -1,0 +1,33 @@
+meta {
+  name: Update Project
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/projects/1
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Updated Project Name",
+    "description": "Updated description",
+    "status": "ACTIVE"
+  }
+}
+
+docs {
+  # Update Project
+
+  Updates project fields. All fields optional; at least one required.
+  Requires `project:update` permission AND Owner/Editor role (or System Admin).
+
+  - `200 OK` — project updated
+  - `401 Unauthorized` — not authenticated
+  - `403 Forbidden` — missing permission or not Owner/Editor
+  - `404 Not Found` — project does not exist or is soft-deleted
+  - `409 Conflict` — name conflicts with another project
+  - `422 Unprocessable Entity` — validation error
+}

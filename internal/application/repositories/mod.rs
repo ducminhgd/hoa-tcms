@@ -17,7 +17,10 @@ pub mod admin_bypass_repository;
 pub mod group_repository;
 pub mod group_role_repository;
 pub mod member_repository;
+pub mod metadata_seeder;
 pub mod permission_repository;
+pub mod project_member_repository;
+pub mod project_repository;
 pub mod role_repository;
 pub mod user_repository;
 

@@ -45,4 +45,21 @@ pub enum DomainError {
     /// Cannot modify a protected role (e.g. System Admin).
     #[error("role protected: {0}")]
     RoleProtected(String),
+
+    // ── Project variants (Milestone 3) ────────────────────────────────────
+    /// Duplicate project name.
+    #[error("duplicate project name: {0}")]
+    DuplicateProjectName(String),
+
+    /// Project not found.
+    #[error("project not found: {0}")]
+    ProjectNotFound(String),
+
+    /// Last owner cannot be removed or downgraded.
+    #[error("cannot remove last owner: {0}")]
+    LastOwnerCannotBeRemoved(String),
+
+    /// User is not a member of the project.
+    #[error("not a member of project: {0}")]
+    NotProjectMember(String),
 }

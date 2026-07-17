@@ -1,0 +1,23 @@
+meta {
+  name: Get Project
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/projects/1
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get Project Detail
+
+  Returns full project details including member list. Requires `project:read` permission.
+  User must be a project member (or System Admin).
+
+  - `200 OK` — project with members
+  - `401 Unauthorized` — not authenticated
+  - `403 Forbidden` — missing permission or not a member
+  - `404 Not Found` — project does not exist or is soft-deleted
+}

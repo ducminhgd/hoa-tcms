@@ -1,0 +1,31 @@
+meta {
+  name: Change Member Role
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/projects/1/members/2
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "role": "Editor"
+  }
+}
+
+docs {
+  # Change Member Role
+
+  Changes a single member's role on a project. Requires `project:update` permission
+  AND Owner role (or System Admin). Cannot downgrade the last Owner.
+
+  - `200 OK` — updated member record
+  - `401 Unauthorized` — not authenticated
+  - `403 Forbidden` — missing permission or not Owner
+  - `404 Not Found` — project does not exist or user not a member
+  - `409 Conflict` — cannot change role of last Owner
+  - `422 Unprocessable Entity` — invalid role value
+}

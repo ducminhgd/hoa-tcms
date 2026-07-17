@@ -1,6 +1,12 @@
 //! Configuration — application state and environment variable loading.
 
+pub mod metadata_seeder;
+
 use sea_orm::DatabaseConnection;
+use std::sync::Arc;
+
+use crate::adapters::http::handlers::project_handler::ProjectHandler;
+use crate::application::services::session_store::SessionStore;
 
 /// Shared application state available to all HTTP handlers.
 ///
@@ -11,4 +17,8 @@ pub struct AppState {
     pub pool: sqlx::PgPool,
     pub db: DatabaseConnection,
     pub redis_client: redis::Client,
+    /// Session store for auth validation.
+    pub session_store: Arc<dyn SessionStore>,
+    /// Project handler (Milestone 3).
+    pub project_handler: Arc<ProjectHandler>,
 }

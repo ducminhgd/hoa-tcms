@@ -1,0 +1,35 @@
+meta {
+  name: Manage Project Members
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/projects/1/members
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "add": [
+      { "user_id": 2, "role": "Editor" },
+      { "user_id": 3, "role": "Viewer" }
+    ],
+    "remove": [4]
+  }
+}
+
+docs {
+  # Manage Project Members (Bulk Add/Remove)
+
+  Adds and/or removes members from a project. Removals processed before additions.
+  Requires `project:update` permission AND Owner role (or System Admin).
+
+  - `200 OK` — summary of added and removed members
+  - `401 Unauthorized` — not authenticated
+  - `403 Forbidden` — missing permission or not Owner
+  - `404 Not Found` — project does not exist
+  - `409 Conflict` — user already a member (on add)
+  - `422 Unprocessable Entity` — invalid role or empty request
+}

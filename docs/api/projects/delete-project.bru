@@ -1,0 +1,23 @@
+meta {
+  name: Delete Project
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/projects/1
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Delete Project (Soft-delete)
+
+  Soft-deletes a project. No cascade to children. Requires `project:delete` permission
+  AND Owner role on the project (or System Admin).
+
+  - `204 No Content` — project soft-deleted
+  - `401 Unauthorized` — not authenticated
+  - `403 Forbidden` — missing permission or not Owner
+  - `404 Not Found` — project does not exist or already soft-deleted
+}

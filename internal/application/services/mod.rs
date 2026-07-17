@@ -15,4 +15,5 @@ pub mod authorization;
 pub mod errors;
 pub mod password_hasher;
 pub mod permission_resolver;
+pub mod project_service;
 pub mod session_store;
