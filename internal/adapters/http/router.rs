@@ -29,6 +29,27 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .route(
                 "/projects/{project_id}/members/{user_id}",
                 web::patch().to(change_member_role),
+            )
+            // Test execution routes (Milestone 4)
+            .route("/test-executions", web::get().to(list_test_executions))
+            .route("/test-executions", web::post().to(create_test_execution))
+            .route("/test-executions/{id}", web::get().to(get_test_execution))
+            .route(
+                "/test-executions/{id}",
+                web::patch().to(update_test_execution),
+            )
+            .route(
+                "/test-executions/{id}",
+                web::delete().to(delete_test_execution),
+            )
+            .route(
+                "/test-executions/{id}/import-cases",
+                web::post().to(import_test_cases),
+            )
+            // Test case result routes (Milestone 4)
+            .route(
+                "/test-case-results/{id}",
+                web::patch().to(update_test_case_result),
             ),
     );
 }
@@ -142,4 +163,73 @@ async fn change_member_role(
     body: web::Json<ChangeMemberRoleRequest>,
 ) -> actix_web::HttpResponse {
     handler.change_member_role(req, path, body).await
+}
+
+// ---------------------------------------------------------------------------
+// Test execution handlers — delegates to TestExecutionHandler
+// ---------------------------------------------------------------------------
+
+use crate::adapters::http::handlers::test_execution_handler::TestExecutionHandler;
+use crate::application::dto::test_execution::{
+    CreateTestExecutionRequest, ImportCasesRequest, ListTestExecutionsQuery,
+    UpdateTestCaseResultRequest, UpdateTestExecutionRequest,
+};
+
+async fn list_test_executions(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestExecutionHandler>>,
+    query: web::Query<ListTestExecutionsQuery>,
+) -> actix_web::HttpResponse {
+    handler.list(req, query).await
+}
+
+async fn create_test_execution(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestExecutionHandler>>,
+    body: web::Json<CreateTestExecutionRequest>,
+) -> actix_web::HttpResponse {
+    handler.create(req, body).await
+}
+
+async fn get_test_execution(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestExecutionHandler>>,
+    path: web::Path<i64>,
+) -> actix_web::HttpResponse {
+    handler.get(req, path).await
+}
+
+async fn update_test_execution(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestExecutionHandler>>,
+    path: web::Path<i64>,
+    body: web::Json<UpdateTestExecutionRequest>,
+) -> actix_web::HttpResponse {
+    handler.update(req, path, body).await
+}
+
+async fn delete_test_execution(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestExecutionHandler>>,
+    path: web::Path<i64>,
+) -> actix_web::HttpResponse {
+    handler.delete(req, path).await
+}
+
+async fn import_test_cases(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestExecutionHandler>>,
+    path: web::Path<i64>,
+    body: web::Json<ImportCasesRequest>,
+) -> actix_web::HttpResponse {
+    handler.import_cases(req, path, body).await
+}
+
+async fn update_test_case_result(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestExecutionHandler>>,
+    path: web::Path<i64>,
+    body: web::Json<UpdateTestCaseResultRequest>,
+) -> actix_web::HttpResponse {
+    handler.update_result(req, path, body).await
 }
