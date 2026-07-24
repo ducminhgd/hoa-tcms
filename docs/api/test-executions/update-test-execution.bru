@@ -1,0 +1,32 @@
+meta {
+  name: Update Test Execution
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/test-executions/1
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Updated Execution Name",
+    "tester_ids": [2, 3, 4]
+  }
+}
+
+docs {
+  # Update Test Execution
+
+  Updates test execution metadata (name) and/or tester assignments. Both operations are atomic —
+  if tester update fails, the name change is rolled back. Requires `test_execution:update` permission.
+
+  All fields are optional. At least one field must be provided.
+
+  - `200 OK` — execution updated with tester info
+  - `403 Forbidden` — missing permission or access denied
+  - `404 Not Found` — execution does not exist or is soft-deleted
+  - `422 Unprocessable Entity` — validation error (no fields provided, name empty)
+}

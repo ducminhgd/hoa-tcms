@@ -1,0 +1,35 @@
+meta {
+  name: Update Test Case Result
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/test-case-results/1
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "result": "PASS",
+    "logs": "All assertions passed. See attached screenshot."
+  }
+}
+
+docs {
+  # Update Test Case Result
+
+  Updates the result status and/or logs of a test case result. Requires `test_execution:update`
+  permission on the parent execution.
+
+  - **tested_by**: Set once on the first transition away from `NOT_TESTED`, and never modified
+    thereafter. Subsequent updates only change `updated_by`.
+  - **Result values**: `NOT_TESTED`, `IN_PROGRESS`, `PASS`, `FAIL`, `WARNING`, `IGNORE`
+  - Both fields are optional. At least one must be provided.
+
+  - `200 OK` — result updated
+  - `403 Forbidden` — missing permission or access denied
+  - `404 Not Found` — test case result does not exist or is soft-deleted
+  - `422 Unprocessable Entity` — validation error (no fields provided, invalid result value)
+}

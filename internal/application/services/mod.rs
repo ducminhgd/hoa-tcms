@@ -17,3 +17,4 @@ pub mod password_hasher;
 pub mod permission_resolver;
 pub mod project_service;
 pub mod session_store;
+pub mod test_execution_service;

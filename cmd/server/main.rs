@@ -13,8 +13,10 @@ use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
 use hoa_tcms_core::adapters::http::handlers::project_handler::ProjectHandler;
+use hoa_tcms_core::adapters::http::handlers::test_execution_handler::TestExecutionHandler;
 use hoa_tcms_core::application::services::authorization::AuthorizationService;
 use hoa_tcms_core::application::services::project_service::ProjectService;
+use hoa_tcms_core::application::services::test_execution_service::TestExecutionService;
 use hoa_tcms_core::configure_app;
 use hoa_tcms_core::infrastructure::config::AppState;
 use hoa_tcms_core::infrastructure::config::metadata_seeder::ConfigFileSeeder;
@@ -22,6 +24,8 @@ use hoa_tcms_core::infrastructure::postgres::repositories::admin_bypass_reposito
 use hoa_tcms_core::infrastructure::postgres::repositories::permission_resolver::SqlPermissionResolver;
 use hoa_tcms_core::infrastructure::postgres::repositories::project_member_repository::SqlProjectMemberRepository;
 use hoa_tcms_core::infrastructure::postgres::repositories::project_repository::SqlProjectRepository;
+use hoa_tcms_core::infrastructure::postgres::repositories::test_case_result_repository::SqlTestCaseResultRepository;
+use hoa_tcms_core::infrastructure::postgres::repositories::test_execution_repository::SqlTestExecutionRepository;
 use hoa_tcms_core::infrastructure::redis::session_store::RedisSessionStore;
 
 #[actix_web::main]
@@ -140,24 +144,33 @@ async fn main() -> std::io::Result<()> {
         ConfigFileSeeder::empty_config()
     });
 
-    // Repositories.
+    // Project service dependencies.
     let project_repo = Box::new(SqlProjectRepository::new(db.clone(), metadata_config));
     let member_repo = Box::new(SqlProjectMemberRepository::new(db.clone()));
 
     // Config seeder (no longer used for create — create_project_transactional handles seeding).
-    // Kept for potential standalone seeding operations.
     let seeder = Box::new(ConfigFileSeeder::new(db.clone(), &config_path).await);
 
-    // Project service.
     let project_service = Arc::new(ProjectService::new(
         project_repo,
         member_repo,
         seeder,
-        auth_service,
+        auth_service.clone(),
     ));
 
-    // Project handler.
     let project_handler = Arc::new(ProjectHandler::new(project_service));
+
+    // Test execution service dependencies.
+    let execution_repo = Box::new(SqlTestExecutionRepository::new(db.clone()));
+    let result_repo = Box::new(SqlTestCaseResultRepository::new(db.clone()));
+
+    let test_execution_service = Arc::new(TestExecutionService::new(
+        execution_repo,
+        result_repo,
+        auth_service.clone(),
+    ));
+
+    let test_execution_handler = Arc::new(TestExecutionHandler::new(test_execution_service));
 
     // -----------------------------------------------------------------------
     // Build and run the server with shared application state.
@@ -168,10 +181,12 @@ async fn main() -> std::io::Result<()> {
         redis_client: redis_client.clone(),
         session_store: session_store.clone(),
         project_handler: project_handler.clone(),
+        test_execution_handler: test_execution_handler.clone(),
     });
 
     let session_store_for_app = session_store.clone();
     let project_handler_for_app = project_handler.clone();
+    let test_execution_handler_for_app = test_execution_handler.clone();
 
     actix_web::HttpServer::new(move || {
         actix_web::App::new()
@@ -181,6 +196,7 @@ async fn main() -> std::io::Result<()> {
                 configure_app(
                     cfg,
                     project_handler_for_app.clone(),
+                    test_execution_handler_for_app.clone(),
                     session_store_for_app.clone(),
                 )
             })

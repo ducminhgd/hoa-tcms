@@ -9,3 +9,17 @@ get {
   body: none
   auth: inherit
 }
+
+docs {
+  # List Test Executions
+
+  Returns a paginated list of test executions. Requires `test_execution:read_list` permission.
+  System Admin sees all executions; other users see only executions they created, are a tester on,
+  or belong to a project they are a member of.
+
+  Optional query parameter: `test_run_id` to filter by test run.
+
+  - `200 OK` — paginated list with tester_count per execution
+  - `401 Unauthorized` — not authenticated
+  - `403 Forbidden` — missing `test_execution:read_list` permission
+}
