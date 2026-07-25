@@ -8,12 +8,16 @@ description.workspace = true
 hoa-tcms-pkg = { path = "../pkg" }
 
 actix-web.workspace = true
+actix-files.workspace = true
+actix-multipart.workspace = true
+mime.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+futures-util.workspace = true
 sqlx.workspace = true
 sea-orm.workspace = true
 redis.workspace = true

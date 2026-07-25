@@ -62,4 +62,25 @@ pub enum DomainError {
     /// User is not a member of the project.
     #[error("not a member of project: {0}")]
     NotProjectMember(String),
+
+    // ── File variants (Milestone 5) ────────────────────────────────────────
+    /// File not found.
+    #[error("file not found: {0}")]
+    FileNotFound(String),
+
+    /// File exceeds the maximum allowed size.
+    #[error("file too large: actual={0}, max={1}")]
+    FileTooLarge(u64, u64),
+
+    /// File MIME type is not in the configured allowlist.
+    #[error("file type not allowed: {0}")]
+    FileTypeNotAllowed(String),
+
+    /// File storage backend error.
+    #[error("file storage error: {0}")]
+    FileStorageError(String),
+
+    /// Invalid file name (empty, too long, or path traversal).
+    #[error("invalid file name: {0}")]
+    InvalidFileName(String),
 }

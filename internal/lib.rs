@@ -18,6 +18,7 @@ use actix_web::web;
 use std::sync::Arc;
 
 use crate::adapters::http::handlers::project_handler::ProjectHandler;
+use crate::adapters::http::handlers::test_case_file_handler::TestCaseFileHandler;
 use crate::adapters::http::handlers::test_execution_handler::TestExecutionHandler;
 use crate::application::services::session_store::SessionStore;
 
@@ -29,11 +30,13 @@ pub fn configure_app(
     cfg: &mut web::ServiceConfig,
     project_handler: Arc<ProjectHandler>,
     test_execution_handler: Arc<TestExecutionHandler>,
+    test_case_file_handler: Arc<TestCaseFileHandler>,
     session_store: Arc<dyn SessionStore>,
 ) {
     // Register services as app data for handler extraction.
     cfg.app_data(web::Data::new(project_handler));
     cfg.app_data(web::Data::new(test_execution_handler));
+    cfg.app_data(web::Data::new(test_case_file_handler));
     cfg.app_data(web::Data::new(session_store));
 
     // Register routes.

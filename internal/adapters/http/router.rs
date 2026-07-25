@@ -50,6 +50,23 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .route(
                 "/test-case-results/{id}",
                 web::patch().to(update_test_case_result),
+            )
+            // Test case file routes (Milestone 5)
+            .route(
+                "/projects/{project_id}/test-cases/{id}/files",
+                web::get().to(list_test_case_files),
+            )
+            .route(
+                "/projects/{project_id}/test-cases/{id}/files",
+                web::post().to(upload_test_case_file),
+            )
+            .route(
+                "/projects/{project_id}/test-cases/{id}/files/{file_id}",
+                web::get().to(download_test_case_file),
+            )
+            .route(
+                "/projects/{project_id}/test-cases/{id}/files/{file_id}",
+                web::delete().to(delete_test_case_file),
             ),
     );
 }
@@ -232,4 +249,46 @@ async fn update_test_case_result(
     body: web::Json<UpdateTestCaseResultRequest>,
 ) -> actix_web::HttpResponse {
     handler.update_result(req, path, body).await
+}
+
+// ---------------------------------------------------------------------------
+// Test case file handlers — delegates to TestCaseFileHandler
+// ---------------------------------------------------------------------------
+
+use crate::adapters::http::handlers::test_case_file_handler::TestCaseFileHandler;
+use crate::application::dto::test_case_file::ListFilesQuery;
+use actix_multipart::Multipart;
+
+async fn list_test_case_files(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestCaseFileHandler>>,
+    path: web::Path<(i64, i64)>,
+    query: web::Query<ListFilesQuery>,
+) -> actix_web::HttpResponse {
+    handler.list(req, path, query).await
+}
+
+async fn upload_test_case_file(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestCaseFileHandler>>,
+    path: web::Path<(i64, i64)>,
+    body: Multipart,
+) -> actix_web::HttpResponse {
+    handler.upload(req, path, body).await
+}
+
+async fn download_test_case_file(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestCaseFileHandler>>,
+    path: web::Path<(i64, i64, i64)>,
+) -> actix_web::HttpResponse {
+    handler.download(req, path).await
+}
+
+async fn delete_test_case_file(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestCaseFileHandler>>,
+    path: web::Path<(i64, i64, i64)>,
+) -> actix_web::HttpResponse {
+    handler.delete(req, path).await
 }

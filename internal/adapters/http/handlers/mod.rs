@@ -4,4 +4,5 @@
 //! contain **no business logic** — only translation and validation.
 
 pub mod project_handler;
+pub mod test_case_file_handler;
 pub mod test_execution_handler;
