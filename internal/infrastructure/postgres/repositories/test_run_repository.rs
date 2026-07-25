@@ -112,7 +112,7 @@ impl TestRunRepository for SqlTestRunRepository {
             let trimmed = s.trim();
             if !trimmed.is_empty() && trimmed.len() <= 255 {
                 let escaped = escape_like(trimmed);
-                select = select.filter(test_runs::Column::Summary.like(format!("%{}%", &escaped)));
+                select = select.filter(test_runs::Column::Summary.like(format!("%{}%", escaped)));
             }
         }
 

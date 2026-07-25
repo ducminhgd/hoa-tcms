@@ -193,7 +193,7 @@ impl TestPlanRepository for SqlTestPlanRepository {
             let trimmed = search.trim();
             if !trimmed.is_empty() && trimmed.len() <= 255 {
                 let escaped = escape_like(trimmed);
-                select = select.filter(test_plans::Column::Name.like(format!("%{}%", &escaped)));
+                select = select.filter(test_plans::Column::Name.like(format!("%{}%", escaped)));
             }
         }
 
