@@ -9,6 +9,7 @@ pub mod projects;
 pub mod role_permissions;
 pub mod roles;
 pub mod test_case_categories;
+pub mod test_case_files;
 pub mod test_case_results;
 pub mod test_case_templates;
 pub mod test_cases;

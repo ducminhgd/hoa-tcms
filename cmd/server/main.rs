@@ -13,9 +13,11 @@ use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
 use hoa_tcms_core::adapters::http::handlers::project_handler::ProjectHandler;
+use hoa_tcms_core::adapters::http::handlers::test_case_file_handler::TestCaseFileHandler;
 use hoa_tcms_core::adapters::http::handlers::test_execution_handler::TestExecutionHandler;
 use hoa_tcms_core::application::services::authorization::AuthorizationService;
 use hoa_tcms_core::application::services::project_service::ProjectService;
+use hoa_tcms_core::application::services::test_case_file_service::TestCaseFileService;
 use hoa_tcms_core::application::services::test_execution_service::TestExecutionService;
 use hoa_tcms_core::configure_app;
 use hoa_tcms_core::infrastructure::config::AppState;
@@ -24,9 +26,11 @@ use hoa_tcms_core::infrastructure::postgres::repositories::admin_bypass_reposito
 use hoa_tcms_core::infrastructure::postgres::repositories::permission_resolver::SqlPermissionResolver;
 use hoa_tcms_core::infrastructure::postgres::repositories::project_member_repository::SqlProjectMemberRepository;
 use hoa_tcms_core::infrastructure::postgres::repositories::project_repository::SqlProjectRepository;
+use hoa_tcms_core::infrastructure::postgres::repositories::test_case_file_repository::SqlTestCaseFileRepository;
 use hoa_tcms_core::infrastructure::postgres::repositories::test_case_result_repository::SqlTestCaseResultRepository;
 use hoa_tcms_core::infrastructure::postgres::repositories::test_execution_repository::SqlTestExecutionRepository;
 use hoa_tcms_core::infrastructure::redis::session_store::RedisSessionStore;
+use hoa_tcms_core::infrastructure::storage::LocalFileStorage;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -172,6 +176,48 @@ async fn main() -> std::io::Result<()> {
 
     let test_execution_handler = Arc::new(TestExecutionHandler::new(test_execution_service));
 
+    // Test case file service dependencies.
+    let upload_base_dir =
+        std::env::var("UPLOAD_BASE_DIR").unwrap_or_else(|_| "uploads".to_string());
+    let max_file_size = std::env::var("MAX_FILE_SIZE")
+        .unwrap_or_else(|_| "10485760".to_string())
+        .parse::<u64>()
+        .unwrap_or(10 * 1024 * 1024);
+
+    // Default allowed MIME types.
+    let allowed_mime_types: Vec<String> = vec![
+        "application/pdf".into(),
+        "image/png".into(),
+        "image/jpeg".into(),
+        "image/gif".into(),
+        "image/webp".into(),
+        "text/plain".into(),
+        "text/csv".into(),
+        "application/json".into(),
+        "application/zip".into(),
+        "application/x-tar".into(),
+        "application/gzip".into(),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".into(),
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document".into(),
+        "application/vnd.ms-excel".into(),
+        "application/vnd.ms-powerpoint".into(),
+    ];
+
+    let file_storage = Box::new(LocalFileStorage::new(&upload_base_dir));
+    let test_case_file_repo = Box::new(SqlTestCaseFileRepository::new(db.clone()));
+    let member_repo = Box::new(SqlProjectMemberRepository::new(db.clone()));
+
+    let test_case_file_service = Arc::new(TestCaseFileService::new(
+        test_case_file_repo,
+        file_storage,
+        auth_service.clone(),
+        member_repo,
+        max_file_size,
+        allowed_mime_types,
+    ));
+
+    let test_case_file_handler = Arc::new(TestCaseFileHandler::new(test_case_file_service));
+
     // -----------------------------------------------------------------------
     // Build and run the server with shared application state.
     // -----------------------------------------------------------------------
@@ -182,11 +228,13 @@ async fn main() -> std::io::Result<()> {
         session_store: session_store.clone(),
         project_handler: project_handler.clone(),
         test_execution_handler: test_execution_handler.clone(),
+        test_case_file_handler: test_case_file_handler.clone(),
     });
 
     let session_store_for_app = session_store.clone();
     let project_handler_for_app = project_handler.clone();
     let test_execution_handler_for_app = test_execution_handler.clone();
+    let test_case_file_handler_for_app = test_case_file_handler.clone();
 
     actix_web::HttpServer::new(move || {
         actix_web::App::new()
@@ -197,6 +245,7 @@ async fn main() -> std::io::Result<()> {
                     cfg,
                     project_handler_for_app.clone(),
                     test_execution_handler_for_app.clone(),
+                    test_case_file_handler_for_app.clone(),
                     session_store_for_app.clone(),
                 )
             })

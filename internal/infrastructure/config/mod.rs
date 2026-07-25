@@ -6,6 +6,7 @@ use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
 use crate::adapters::http::handlers::project_handler::ProjectHandler;
+use crate::adapters::http::handlers::test_case_file_handler::TestCaseFileHandler;
 use crate::adapters::http::handlers::test_execution_handler::TestExecutionHandler;
 use crate::application::services::session_store::SessionStore;
 
@@ -24,4 +25,6 @@ pub struct AppState {
     pub project_handler: Arc<ProjectHandler>,
     /// Test execution handler (Milestone 4).
     pub test_execution_handler: Arc<TestExecutionHandler>,
+    /// Test case file handler (Milestone 5).
+    pub test_case_file_handler: Arc<TestCaseFileHandler>,
 }

@@ -18,6 +18,8 @@ tokio = { version = "1", features = ["full"] }
 # HTTP server
 actix-web = "4"
 actix-files = "0.6"
+actix-multipart = "0.7"
+mime = "0.3"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
@@ -51,6 +53,9 @@ rand = "0.8"
 
 # Async trait support
 async-trait = "0.1"
+
+# Stream utilities
+futures-util = "0.3"
 
 # Base64 encoding
 base64 = "0.22"

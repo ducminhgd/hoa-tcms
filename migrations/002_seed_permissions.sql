@@ -78,7 +78,12 @@ VALUES
 
     -- Sharing permissions
     ('Share Object', 'share:create'),
-    ('Remove Share', 'share:delete')
+    ('Remove Share', 'share:delete'),
+
+    -- Test Case File permissions
+    ('Upload Test Case File', 'test_case_file:upload'),
+    ('Read Test Case File', 'test_case_file:read'),
+    ('Delete Test Case File', 'test_case_file:delete')
 ON CONFLICT (code) DO NOTHING;
 
 COMMIT;
@@ -95,6 +100,7 @@ COMMIT;
 --     'test_plan:create', 'test_plan:read', 'test_plan:read_list', 'test_plan:update', 'test_plan:select', 'test_plan:delete',
 --     'test_run:create', 'test_run:read', 'test_run:read_list', 'test_run:update', 'test_run:select', 'test_run:delete',
 --     'test_execution:create', 'test_execution:read', 'test_execution:read_list', 'test_execution:update', 'test_execution:select', 'test_execution:delete',
---     'share:create', 'share:delete'
+--     'share:create', 'share:delete',
+--     'test_case_file:upload', 'test_case_file:read', 'test_case_file:delete'
 -- );
 -- COMMIT;

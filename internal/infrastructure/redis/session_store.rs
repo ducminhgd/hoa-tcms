@@ -201,18 +201,20 @@ mod tests {
     use uuid::Uuid;
 
     /// Helper to create a store pointed at a local Redis instance.
-    async fn test_store() -> RedisSessionStore {
-        let client = redis::Client::open("redis://127.0.0.1:6379").expect("invalid Redis URL");
-        let conn = client
-            .get_multiplexed_async_connection()
-            .await
-            .expect("failed to connect to Redis");
-        RedisSessionStore::new(conn)
+    ///
+    /// Returns `None` when Redis is not available so that tests gracefully
+    /// skip rather than panic on machines without a running Redis server.
+    async fn test_store() -> Option<RedisSessionStore> {
+        let client = redis::Client::open("redis://127.0.0.1:6379").ok()?;
+        let conn = client.get_multiplexed_async_connection().await.ok()?;
+        Some(RedisSessionStore::new(conn))
     }
 
     #[tokio::test]
     async fn create_and_get_session() {
-        let store = test_store().await;
+        let Some(store) = test_store().await else {
+            return;
+        };
         let session = store
             .create_session(42, Some("browser-fingerprint"))
             .await
@@ -230,7 +232,9 @@ mod tests {
 
     #[tokio::test]
     async fn get_nonexistent_session() {
-        let store = test_store().await;
+        let Some(store) = test_store().await else {
+            return;
+        };
         let result = store
             .get_session(&Uuid::new_v4())
             .await
@@ -240,7 +244,9 @@ mod tests {
 
     #[tokio::test]
     async fn delete_session() {
-        let store = test_store().await;
+        let Some(store) = test_store().await else {
+            return;
+        };
         let session = store
             .create_session(7, None)
             .await
@@ -260,7 +266,9 @@ mod tests {
 
     #[tokio::test]
     async fn delete_all_user_sessions() {
-        let store = test_store().await;
+        let Some(store) = test_store().await else {
+            return;
+        };
 
         // Create two sessions for user 1 and one for user 2.
         let s1 = store.create_session(1, None).await.unwrap();
@@ -280,7 +288,9 @@ mod tests {
 
     #[tokio::test]
     async fn delete_all_user_sessions_noop() {
-        let store = test_store().await;
+        let Some(store) = test_store().await else {
+            return;
+        };
         let deleted = store
             .delete_all_user_sessions(999)
             .await
