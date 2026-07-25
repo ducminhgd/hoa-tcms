@@ -1,0 +1,22 @@
+meta {
+  name: Get Test Run
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/projects/1/test-runs/1
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get Test Run
+
+  Returns the full detail of a test run. Requires `test_run:read` permission and project
+  membership (any role).
+
+  - `200 OK` — test run detail
+  - `403 Forbidden` — missing permission or not a project member
+  - `404 Not Found` — not found or soft-deleted
+}

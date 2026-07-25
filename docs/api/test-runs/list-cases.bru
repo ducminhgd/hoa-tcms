@@ -1,0 +1,22 @@
+meta {
+  name: List Test Run Cases
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/test-runs/1/cases
+  body: none
+  auth: inherit
+}
+
+docs {
+  # List Test Run Cases
+
+  Returns the test case IDs linked to a test run. Requires `test_run:read` permission and
+  project membership (any role).
+
+  - `200 OK` — array of case IDs
+  - `403 Forbidden` — missing permission or not a member
+  - `404 Not Found` — run not found or soft-deleted
+}

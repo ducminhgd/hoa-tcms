@@ -1,0 +1,32 @@
+meta {
+  name: Upload Test Case File
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/projects/1/test-cases/1/files
+  body: multipart-form
+  auth: inherit
+}
+
+body:multipart-form {
+  file: @/path/to/screenshot.png
+}
+
+docs {
+  # Upload Test Case File
+
+  Uploads a file attachment to a test case. Single file per request. Requires
+  `test_case_file:upload` permission and Contributor (or higher) role. Contributors
+  can only upload to their own test cases.
+
+  MIME type is detected from file content (magic bytes) — client Content-Type is not trusted.
+  Max file size: 10 MB (configurable).
+
+  - `201 Created` — file uploaded, `Location` header set
+  - `403 Forbidden` — missing permission, Viewer role, or Contributor ownership restriction
+  - `404 Not Found` — project or test case not found or soft-deleted
+  - `413 Content Too Large` — file exceeds max size
+  - `422 Unprocessable Entity` — no file part, empty filename, path traversal, disallowed type
+}

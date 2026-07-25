@@ -1,0 +1,22 @@
+meta {
+  name: Get Test Plan
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/test-plans/1
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get Test Plan
+
+  Returns the full detail of a test plan including linked project IDs and resolved plan types.
+  Requires `test_plan:read` permission and membership in at least one linked project.
+
+  - `200 OK` — test plan detail
+  - `403 Forbidden` — missing permission
+  - `404 Not Found` — not found, soft-deleted, or not a member of any linked project
+}

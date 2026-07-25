@@ -1,0 +1,33 @@
+meta {
+  name: Create Test Plan
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/test-plans
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Sprint 12 Regression",
+    "project_ids": [1, 3],
+    "types": ["REGRESSION", "FUNCTIONAL"],
+    "version": "2.1",
+    "description": "Full regression test plan for Sprint 12"
+  }
+}
+
+docs {
+  # Create Test Plan
+
+  Creates a new test plan spanning one or more projects. Requires `test_plan:create` permission
+  and must be Owner or Editor in at least one specified project.
+
+  - `201 Created` — plan created, `Location` header set
+  - `403 Forbidden` — missing permission or not Owner/Editor in any project
+  - `409 Conflict` — test plan name already exists (case-insensitive, global)
+  - `422 Unprocessable Entity` — validation error (empty name, empty project_ids, invalid project)
+}

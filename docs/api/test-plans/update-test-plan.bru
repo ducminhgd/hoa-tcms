@@ -1,0 +1,35 @@
+meta {
+  name: Update Test Plan
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/test-plans/1
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Sprint 12 Full Regression",
+    "version": "3.0",
+    "types": ["REGRESSION"],
+    "description": "Updated regression suite",
+    "project_ids": [1, 3, 5]
+  }
+}
+
+docs {
+  # Update Test Plan
+
+  Updates a test plan's fields and optionally its project associations. All fields are optional
+  but at least one must be provided. Status changes must use the dedicated `transition-status`
+  endpoint. Requires `test_plan:update` permission and Owner/Editor in a linked project.
+
+  - `200 OK` — updated test plan
+  - `403 Forbidden` — missing permission or not Owner/Editor
+  - `404 Not Found` — not found, soft-deleted, or not a member
+  - `409 Conflict` — name conflict
+  - `422 Unprocessable Entity` — validation error (empty body, status field rejected)
+}

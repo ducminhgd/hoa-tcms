@@ -1,0 +1,23 @@
+meta {
+  name: Delete Test Plan
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/test-plans/1
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Delete Test Plan
+
+  Soft-deletes a test plan. Project associations in `TEST_PLAN_PROJECTS` are preserved for
+  audit trail integrity. Requires `test_plan:delete` permission and Owner/Editor in a linked
+  project.
+
+  - `204 No Content` — deleted
+  - `403 Forbidden` — missing permission or not Owner/Editor
+  - `404 Not Found` — not found, already soft-deleted, or not a member
+}

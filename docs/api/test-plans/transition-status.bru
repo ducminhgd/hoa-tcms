@@ -1,0 +1,31 @@
+meta {
+  name: Transition Test Plan Status
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/test-plans/1/transition-status
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "status": "IN_PROGRESS"
+  }
+}
+
+docs {
+  # Transition Test Plan Status
+
+  Advances a test plan through its lifecycle using the validated state machine.
+  Allowed transitions: TODO → IN_PROGRESS/CANCEL, IN_PROGRESS → DONE/CANCEL,
+  DONE → IN_PROGRESS, CANCEL → TODO. Self-transitions are no-ops.
+  Requires `test_plan:update` permission and Owner/Editor in a linked project.
+
+  - `200 OK` — updated test plan with new status
+  - `403 Forbidden` — missing permission or not Owner/Editor
+  - `404 Not Found` — not found or soft-deleted
+  - `422 Unprocessable Entity` — invalid status or invalid transition
+}

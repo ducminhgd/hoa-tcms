@@ -1,0 +1,33 @@
+meta {
+  name: Update Test Run
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/projects/1/test-runs/1
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "summary": "Sprint 12 Updated Regression Run",
+    "version": "v2.4.0",
+    "notes": "Updated notes",
+    "case_ids": [10, 11, 12, 13]
+  }
+}
+
+docs {
+  # Update Test Run
+
+  Updates a test run's fields and optionally replaces case assignments. All fields are
+  optional. Requires `test_run:update` permission and Contributor (or higher) role.
+
+  - `200 OK` — updated test run
+  - `403 Forbidden` — missing permission or Viewer role
+  - `404 Not Found` — not found or soft-deleted
+  - `409 Conflict` — duplicate summary
+  - `422 Unprocessable Entity` — validation error
+}

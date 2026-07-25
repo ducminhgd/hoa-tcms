@@ -1,0 +1,22 @@
+meta {
+  name: Delete Test Run
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/projects/1/test-runs/1
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Delete Test Run
+
+  Soft-deletes a test run. Requires `test_run:delete` permission and Contributor (or higher)
+  role in the project.
+
+  - `204 No Content` — deleted
+  - `403 Forbidden` — missing permission or Viewer role
+  - `404 Not Found` — not found or already soft-deleted
+}
