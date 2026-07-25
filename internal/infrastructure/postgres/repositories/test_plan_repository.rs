@@ -80,9 +80,9 @@ fn validate_sort(sort: &str) -> RepositoryResult<(test_plans::Column, sea_orm::O
 }
 
 fn types_contains(types: &serde_json::Value, target: &str) -> bool {
-    types.as_array().map_or(false, |arr| {
+    types.as_array().is_some_and(|arr| {
         arr.iter()
-            .any(|v| v.as_str().map_or(false, |s| s.eq_ignore_ascii_case(target)))
+            .any(|v| v.as_str().is_some_and(|s| s.eq_ignore_ascii_case(target)))
     })
 }
 
@@ -346,7 +346,7 @@ impl TestPlanRepository for SqlTestPlanRepository {
                         .map_err(|e| RepositoryError::Database(e.to_string()))?;
                     }
 
-                    Ok(model_to_entity(inserted)?)
+                    model_to_entity(inserted)
                 })
             })
             .await
@@ -410,7 +410,7 @@ impl TestPlanRepository for SqlTestPlanRepository {
                         }
                     })?;
 
-                    Ok(model_to_entity(inserted)?)
+                    model_to_entity(inserted)
                 })
             })
             .await

@@ -5,10 +5,12 @@
 
 pub mod auth;
 pub mod group;
+pub mod object_sharing;
 pub mod permission;
 pub mod project;
 pub mod role;
 pub mod test_case_file;
 pub mod test_execution;
 pub mod test_plan;
+pub mod test_run;
 pub mod user;

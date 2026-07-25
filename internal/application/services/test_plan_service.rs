@@ -93,6 +93,7 @@ impl TestPlanService {
     // Create
     // ------------------------------------------------------------------
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self,
         user_id: i64,
@@ -174,7 +175,7 @@ impl TestPlanService {
     // ------------------------------------------------------------------
     // List
     // ------------------------------------------------------------------
-
+    #[allow(clippy::too_many_arguments)]
     pub async fn list(
         &self,
         user_id: i64,
@@ -249,8 +250,7 @@ impl TestPlanService {
 
     // ------------------------------------------------------------------
     // Update
-    // ------------------------------------------------------------------
-
+    #[allow(clippy::too_many_arguments)]
     pub async fn update(
         &self,
         plan_id: i64,

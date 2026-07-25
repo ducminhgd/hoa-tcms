@@ -17,6 +17,8 @@ pub mod password_hasher;
 pub mod permission_resolver;
 pub mod project_service;
 pub mod session_store;
+pub mod sharing_service;
 pub mod test_case_file_service;
 pub mod test_execution_service;
 pub mod test_plan_service;
+pub mod test_run_service;
