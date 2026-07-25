@@ -67,6 +67,17 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .route(
                 "/projects/{project_id}/test-cases/{id}/files/{file_id}",
                 web::delete().to(delete_test_case_file),
+            )
+            // Test plan routes (Milestone 6)
+            .route("/test-plans", web::get().to(list_test_plans))
+            .route("/test-plans", web::post().to(create_test_plan))
+            .route("/test-plans/select", web::get().to(select_test_plans))
+            .route("/test-plans/{id}", web::get().to(get_test_plan))
+            .route("/test-plans/{id}", web::patch().to(update_test_plan))
+            .route("/test-plans/{id}", web::delete().to(delete_test_plan))
+            .route(
+                "/test-plans/{id}/transition-status",
+                web::post().to(transition_test_plan_status),
             ),
     );
 }
@@ -291,4 +302,67 @@ async fn delete_test_case_file(
     path: web::Path<(i64, i64, i64)>,
 ) -> actix_web::HttpResponse {
     handler.delete(req, path).await
+}
+
+// ---------------------------------------------------------------------------
+// Test plan handlers — delegates to TestPlanHandler
+// ---------------------------------------------------------------------------
+
+use crate::adapters::http::handlers::test_plan_handler::TestPlanHandler;
+
+async fn list_test_plans(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestPlanHandler>>,
+    query: web::Query<crate::application::dto::test_plan::ListTestPlansQuery>,
+) -> actix_web::HttpResponse {
+    handler.list(req, query).await
+}
+
+async fn create_test_plan(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestPlanHandler>>,
+    body: web::Json<crate::application::dto::test_plan::CreateTestPlanRequest>,
+) -> actix_web::HttpResponse {
+    handler.create(req, body).await
+}
+
+async fn select_test_plans(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestPlanHandler>>,
+) -> actix_web::HttpResponse {
+    handler.select(req).await
+}
+
+async fn get_test_plan(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestPlanHandler>>,
+    path: web::Path<i64>,
+) -> actix_web::HttpResponse {
+    handler.get(req, path).await
+}
+
+async fn update_test_plan(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestPlanHandler>>,
+    path: web::Path<i64>,
+    body: web::Json<crate::application::dto::test_plan::UpdateTestPlanRequest>,
+) -> actix_web::HttpResponse {
+    handler.update(req, path, body).await
+}
+
+async fn delete_test_plan(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestPlanHandler>>,
+    path: web::Path<i64>,
+) -> actix_web::HttpResponse {
+    handler.delete(req, path).await
+}
+
+async fn transition_test_plan_status(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestPlanHandler>>,
+    path: web::Path<i64>,
+    body: web::Json<crate::application::dto::test_plan::TransitionStatusRequest>,
+) -> actix_web::HttpResponse {
+    handler.transition_status(req, path, body).await
 }

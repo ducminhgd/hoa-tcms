@@ -26,6 +26,7 @@ pub mod role_repository;
 pub mod test_case_file_repository;
 pub mod test_case_result_repository;
 pub mod test_execution_repository;
+pub mod test_plan_repository;
 pub mod user_repository;
 
 /// Common repository result type.

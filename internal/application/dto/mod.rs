@@ -10,4 +10,5 @@ pub mod project;
 pub mod role;
 pub mod test_case_file;
 pub mod test_execution;
+pub mod test_plan;
 pub mod user;

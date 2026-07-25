@@ -20,6 +20,7 @@ use std::sync::Arc;
 use crate::adapters::http::handlers::project_handler::ProjectHandler;
 use crate::adapters::http::handlers::test_case_file_handler::TestCaseFileHandler;
 use crate::adapters::http::handlers::test_execution_handler::TestExecutionHandler;
+use crate::adapters::http::handlers::test_plan_handler::TestPlanHandler;
 use crate::application::services::session_store::SessionStore;
 
 /// Register all application routes on the given `ServiceConfig`.
@@ -31,12 +32,14 @@ pub fn configure_app(
     project_handler: Arc<ProjectHandler>,
     test_execution_handler: Arc<TestExecutionHandler>,
     test_case_file_handler: Arc<TestCaseFileHandler>,
+    test_plan_handler: Arc<TestPlanHandler>,
     session_store: Arc<dyn SessionStore>,
 ) {
     // Register services as app data for handler extraction.
     cfg.app_data(web::Data::new(project_handler));
     cfg.app_data(web::Data::new(test_execution_handler));
     cfg.app_data(web::Data::new(test_case_file_handler));
+    cfg.app_data(web::Data::new(test_plan_handler));
     cfg.app_data(web::Data::new(session_store));
 
     // Register routes.
