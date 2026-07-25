@@ -19,3 +19,4 @@ pub mod project_service;
 pub mod session_store;
 pub mod test_case_file_service;
 pub mod test_execution_service;
+pub mod test_plan_service;

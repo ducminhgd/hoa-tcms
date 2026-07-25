@@ -11,4 +11,5 @@ pub mod session;
 pub mod test_case_file;
 pub mod test_case_result;
 pub mod test_execution;
+pub mod test_plan;
 pub mod user;

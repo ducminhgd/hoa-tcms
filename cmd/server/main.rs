@@ -15,10 +15,12 @@ use tracing_subscriber::FmtSubscriber;
 use hoa_tcms_core::adapters::http::handlers::project_handler::ProjectHandler;
 use hoa_tcms_core::adapters::http::handlers::test_case_file_handler::TestCaseFileHandler;
 use hoa_tcms_core::adapters::http::handlers::test_execution_handler::TestExecutionHandler;
+use hoa_tcms_core::adapters::http::handlers::test_plan_handler::TestPlanHandler;
 use hoa_tcms_core::application::services::authorization::AuthorizationService;
 use hoa_tcms_core::application::services::project_service::ProjectService;
 use hoa_tcms_core::application::services::test_case_file_service::TestCaseFileService;
 use hoa_tcms_core::application::services::test_execution_service::TestExecutionService;
+use hoa_tcms_core::application::services::test_plan_service::TestPlanService;
 use hoa_tcms_core::configure_app;
 use hoa_tcms_core::infrastructure::config::AppState;
 use hoa_tcms_core::infrastructure::config::metadata_seeder::ConfigFileSeeder;
@@ -29,6 +31,7 @@ use hoa_tcms_core::infrastructure::postgres::repositories::project_repository::S
 use hoa_tcms_core::infrastructure::postgres::repositories::test_case_file_repository::SqlTestCaseFileRepository;
 use hoa_tcms_core::infrastructure::postgres::repositories::test_case_result_repository::SqlTestCaseResultRepository;
 use hoa_tcms_core::infrastructure::postgres::repositories::test_execution_repository::SqlTestExecutionRepository;
+use hoa_tcms_core::infrastructure::postgres::repositories::test_plan_repository::SqlTestPlanRepository;
 use hoa_tcms_core::infrastructure::redis::session_store::RedisSessionStore;
 use hoa_tcms_core::infrastructure::storage::LocalFileStorage;
 
@@ -218,6 +221,18 @@ async fn main() -> std::io::Result<()> {
 
     let test_case_file_handler = Arc::new(TestCaseFileHandler::new(test_case_file_service));
 
+    // Test plan service dependencies.
+    let test_plan_repo = Box::new(SqlTestPlanRepository::new(db.clone()));
+    let test_plan_member_repo = Box::new(SqlProjectMemberRepository::new(db.clone()));
+
+    let test_plan_service = Arc::new(TestPlanService::new(
+        test_plan_repo,
+        test_plan_member_repo,
+        auth_service.clone(),
+    ));
+
+    let test_plan_handler = Arc::new(TestPlanHandler::new(test_plan_service));
+
     // -----------------------------------------------------------------------
     // Build and run the server with shared application state.
     // -----------------------------------------------------------------------
@@ -229,12 +244,14 @@ async fn main() -> std::io::Result<()> {
         project_handler: project_handler.clone(),
         test_execution_handler: test_execution_handler.clone(),
         test_case_file_handler: test_case_file_handler.clone(),
+        test_plan_handler: test_plan_handler.clone(),
     });
 
     let session_store_for_app = session_store.clone();
     let project_handler_for_app = project_handler.clone();
     let test_execution_handler_for_app = test_execution_handler.clone();
     let test_case_file_handler_for_app = test_case_file_handler.clone();
+    let test_plan_handler_for_app = test_plan_handler.clone();
 
     actix_web::HttpServer::new(move || {
         actix_web::App::new()
@@ -246,6 +263,7 @@ async fn main() -> std::io::Result<()> {
                     project_handler_for_app.clone(),
                     test_execution_handler_for_app.clone(),
                     test_case_file_handler_for_app.clone(),
+                    test_plan_handler_for_app.clone(),
                     session_store_for_app.clone(),
                 )
             })

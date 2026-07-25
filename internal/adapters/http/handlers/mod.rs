@@ -6,3 +6,4 @@
 pub mod project_handler;
 pub mod test_case_file_handler;
 pub mod test_execution_handler;
+pub mod test_plan_handler;

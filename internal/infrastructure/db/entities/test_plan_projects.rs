@@ -11,6 +11,19 @@ pub struct Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::test_plans::Entity",
+        from = "Column::PlanId",
+        to = "super::test_plans::Column::Id"
+    )]
+    TestPlan,
+    #[sea_orm(
+        belongs_to = "super::projects::Entity",
+        from = "Column::ProjectId",
+        to = "super::projects::Column::Id"
+    )]
+    Projects,
+}
 
 impl ActiveModelBehavior for ActiveModel {}
