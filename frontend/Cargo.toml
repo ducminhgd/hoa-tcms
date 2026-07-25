@@ -1,0 +1,25 @@
+[package]
+name = "hoa-tcms-frontend"
+version.workspace = true
+edition = "2021"
+description = "HOA TCMS — Leptos frontend (CSR)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hoa-tcms-pkg = { path = "../pkg" }
+
+leptos.workspace = true
+leptos_router.workspace = true
+leptos_meta.workspace = true
+wasm-bindgen.workspace = true
+web-sys.workspace = true
+js-sys.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono = { workspace = true, features = ["serde"] }
+gloo-net.workspace = true
+console_log.workspace = true
+console_error_panic_hook = "0.1"
+log.workspace = true

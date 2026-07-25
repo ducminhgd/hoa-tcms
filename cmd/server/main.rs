@@ -5,6 +5,7 @@
 //! (database pool, Redis client) and registers it with the HTTP server
 //! so all handlers can access it via `web::Data<AppState>`.
 
+use actix_files::Files;
 use actix_web::web;
 use sea_orm::SqlxPostgresConnector;
 use std::net::TcpListener;
@@ -280,7 +281,13 @@ async fn main() -> std::io::Result<()> {
     let test_run_handler_for_app = test_run_handler.clone();
     let sharing_handler_for_app = sharing_handler.clone();
 
+    // Detect frontend dist directory.
+    let frontend_dist =
+        std::env::var("FRONTEND_DIST").unwrap_or_else(|_| "../frontend/dist".to_string());
+    let frontend_dist_clone = frontend_dist.clone();
+
     actix_web::HttpServer::new(move || {
+        let fd = frontend_dist_clone.clone();
         actix_web::App::new()
             .app_data(app_state.clone())
             .app_data(web::Data::from(session_store_for_app.clone()))
@@ -296,6 +303,16 @@ async fn main() -> std::io::Result<()> {
                     session_store_for_app.clone(),
                 )
             })
+            // Serve WASM/pkg files from frontend/dist
+            .service(Files::new("/pkg", format!("{}/pkg", fd)).prefer_utf8(true))
+            // Serve static assets (CSS, images)
+            .service(Files::new("/static", format!("{}/static", fd)).prefer_utf8(true))
+            // SPA fallback — serve index.html for all non-API routes
+            .service(
+                Files::new("/", &fd)
+                    .index_file("index.html")
+                    .prefer_utf8(true),
+            )
     })
     .listen(listener)?
     .run()

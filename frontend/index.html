@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOA TCMS</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header"><h2>HOA TCMS</h2></div>
+      <div class="sidebar-section">
+        <h3>IAM</h3>
+        <a href="#/users">Users</a>
+        <a href="#/groups">Groups</a>
+        <a href="#/roles">Roles</a>
+        <a href="#/permissions">Permissions</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Projects</h3>
+        <a href="#/projects">Projects</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Test Management</h3>
+        <a href="#/test-plans">Test Plans</a>
+        <a href="#/test-cases">Test Cases</a>
+        <a href="#/test-runs">Test Runs</a>
+        <a href="#/test-executions">Test Executions</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Settings</h3>
+        <a href="#/categories">Categories</a>
+        <a href="#/templates">Templates</a>
+      </div>
+      <div class="sidebar-footer">
+        <a href="#/profile">Profile</a>
+        <a href="#/login" id="logout-link">Logout</a>
+      </div>
+    </nav>
+
+    <!-- Main content area -->
+    <main class="main-content" id="main-content">
+      <div class="page">
+        <h1>HOA TCMS</h1>
+        <p>Test Case Management System — select a section from the sidebar.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Notification toast container -->
+  <div id="toast-container"></div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/router.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
