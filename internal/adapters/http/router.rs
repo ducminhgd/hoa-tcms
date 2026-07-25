@@ -30,6 +30,44 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
                 "/projects/{project_id}/members/{user_id}",
                 web::patch().to(change_member_role),
             )
+            // Test run routes (Milestone 7)
+            .route(
+                "/projects/{project_id}/test-runs",
+                web::get().to(list_test_runs),
+            )
+            .route(
+                "/projects/{project_id}/test-runs",
+                web::post().to(create_test_run),
+            )
+            .route(
+                "/projects/{project_id}/test-runs/{id}",
+                web::get().to(get_test_run),
+            )
+            .route(
+                "/projects/{project_id}/test-runs/{id}",
+                web::patch().to(update_test_run),
+            )
+            .route(
+                "/projects/{project_id}/test-runs/{id}",
+                web::delete().to(delete_test_run),
+            )
+            .route("/test-runs/{id}/cases", web::get().to(list_test_run_cases))
+            .route(
+                "/test-runs/{id}/cases",
+                web::post().to(manage_test_run_cases),
+            )
+            .route(
+                "/test-runs/{id}/statistics",
+                web::get().to(get_test_run_statistics),
+            )
+            // Sharing routes (Milestone 10)
+            .route(
+                "/share/{resource_type}/{resource_id}",
+                web::get().to(list_shares),
+            )
+            .route("/share", web::post().to(create_share))
+            .route("/share/{id}", web::patch().to(update_share))
+            .route("/share/{id}", web::delete().to(delete_share))
             // Test execution routes (Milestone 4)
             .route("/test-executions", web::get().to(list_test_executions))
             .route("/test-executions", web::post().to(create_test_execution))
@@ -365,4 +403,117 @@ async fn transition_test_plan_status(
     body: web::Json<crate::application::dto::test_plan::TransitionStatusRequest>,
 ) -> actix_web::HttpResponse {
     handler.transition_status(req, path, body).await
+}
+
+// ---------------------------------------------------------------------------
+// Test run handlers — delegates to TestRunHandler
+// ---------------------------------------------------------------------------
+
+use crate::adapters::http::handlers::test_run_handler::TestRunHandler;
+
+async fn list_test_runs(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestRunHandler>>,
+    path: web::Path<i64>,
+    query: web::Query<crate::application::dto::test_run::ListTestRunsQuery>,
+) -> actix_web::HttpResponse {
+    handler.list(req, path, query).await
+}
+
+async fn create_test_run(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestRunHandler>>,
+    path: web::Path<i64>,
+    body: web::Json<crate::application::dto::test_run::CreateTestRunRequest>,
+) -> actix_web::HttpResponse {
+    handler.create(req, path, body).await
+}
+
+async fn get_test_run(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestRunHandler>>,
+    path: web::Path<(i64, i64)>,
+) -> actix_web::HttpResponse {
+    handler.get(req, path).await
+}
+
+async fn update_test_run(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestRunHandler>>,
+    path: web::Path<(i64, i64)>,
+    body: web::Json<crate::application::dto::test_run::UpdateTestRunRequest>,
+) -> actix_web::HttpResponse {
+    handler.update(req, path, body).await
+}
+
+async fn delete_test_run(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestRunHandler>>,
+    path: web::Path<(i64, i64)>,
+) -> actix_web::HttpResponse {
+    handler.delete(req, path).await
+}
+
+async fn list_test_run_cases(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestRunHandler>>,
+    path: web::Path<i64>,
+) -> actix_web::HttpResponse {
+    handler.list_cases(req, path).await
+}
+
+async fn manage_test_run_cases(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestRunHandler>>,
+    path: web::Path<i64>,
+    body: web::Json<crate::application::dto::test_run::ManageCasesRequest>,
+) -> actix_web::HttpResponse {
+    handler.manage_cases(req, path, body).await
+}
+
+async fn get_test_run_statistics(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<TestRunHandler>>,
+    path: web::Path<i64>,
+) -> actix_web::HttpResponse {
+    handler.statistics(req, path).await
+}
+
+// ---------------------------------------------------------------------------
+// Sharing handlers — delegates to SharingHandler
+// ---------------------------------------------------------------------------
+
+use crate::adapters::http::handlers::sharing_handler::SharingHandler;
+
+async fn list_shares(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<SharingHandler>>,
+    path: web::Path<(String, i64)>,
+) -> actix_web::HttpResponse {
+    handler.list(req, path).await
+}
+
+async fn create_share(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<SharingHandler>>,
+    body: web::Json<crate::application::dto::object_sharing::CreateShareRequest>,
+) -> actix_web::HttpResponse {
+    handler.create(req, body).await
+}
+
+async fn update_share(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<SharingHandler>>,
+    path: web::Path<i64>,
+    body: web::Json<crate::application::dto::object_sharing::UpdateShareRequest>,
+) -> actix_web::HttpResponse {
+    handler.update(req, path, body).await
+}
+
+async fn delete_share(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<SharingHandler>>,
+    path: web::Path<i64>,
+) -> actix_web::HttpResponse {
+    handler.delete(req, path).await
 }

@@ -83,7 +83,12 @@ VALUES
     -- Test Case File permissions
     ('Upload Test Case File', 'test_case_file:upload'),
     ('Read Test Case File', 'test_case_file:read'),
-    ('Delete Test Case File', 'test_case_file:delete')
+    ('Delete Test Case File', 'test_case_file:delete'),
+
+    -- Share permissions
+    ('Create Share', 'share:create'),
+    ('Read Share', 'share:read'),
+    ('Delete Share', 'share:delete')
 ON CONFLICT (code) DO NOTHING;
 
 COMMIT;
