@@ -8,12 +8,9 @@ use async_trait::async_trait;
 
 /// Hashing and verification of user passwords.
 ///
-/// # Async vs sync
-///
-/// - `hash` is async because the underlying operation (key derivation) is
-///   CPU-bound and should run on a blocking thread pool in production.
-/// - `verify` is sync because it is frequently called on hot paths (login,
-///   re-authentication) and the overhead of an async call is not justified.
+/// Both operations are async because key derivation is CPU-bound and must run
+/// on the blocking thread pool (`tokio::task::spawn_blocking`) so that the
+/// async worker threads are never blocked by a slow PBKDF2 computation.
 #[async_trait]
 pub trait PasswordHasher: Send + Sync {
     /// Hash a plaintext password.
@@ -32,5 +29,5 @@ pub trait PasswordHasher: Send + Sync {
     /// Returns `true` if the password matches the hash, `false` otherwise.
     /// This method does not distinguish between "wrong password" and "malformed
     /// hash" — both return `false`.
-    fn verify(&self, password: &str, hash: &str) -> bool;
+    async fn verify(&self, password: &str, hash: &str) -> bool;
 }

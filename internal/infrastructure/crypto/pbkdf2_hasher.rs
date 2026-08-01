@@ -85,60 +85,77 @@ impl PasswordHasher for Pbkdf2Hasher {
         .map_err(|e| format!("password hashing failed: {}", e))?
     }
 
-    fn verify(&self, password: &str, encoded: &str) -> bool {
-        // Split on '$'. Expected format:
-        //   [0] ""  [1] "pbkdf2-sha256"  [2] "i=N,l=32"  [3] salt_b64  [4] hash_b64
-        let parts: Vec<&str> = encoded.split('$').collect();
-        if parts.len() != 5 {
-            return false;
-        }
+    async fn verify(&self, password: &str, encoded: &str) -> bool {
+        let password = password.to_owned();
+        let encoded = encoded.to_owned();
+        let default_iterations = self.iterations;
 
-        // Validate algorithm identifier.
-        if parts[1] != "pbkdf2-sha256" {
-            return false;
-        }
-
-        // Parse iterations from the parameters segment.
-        const MIN_ITERATIONS: u32 = 100_000;
-
-        let iterations: u32 = parts[2]
-            .split(',')
-            .find_map(|param| param.strip_prefix("i="))
-            .and_then(|val| val.parse::<u32>().ok())
-            .unwrap_or(self.iterations);
-
-        // Reject hashes with fewer than the minimum iterations to prevent
-        // trivial brute-forcing if an attacker has injected a weak hash
-        // (e.g. i=1) into the database.
-        if iterations < MIN_ITERATIONS {
-            return false;
-        }
-
-        // Decode salt.
-        let salt_bytes = match STANDARD_NO_PAD.decode(parts[3]) {
-            Ok(b) => b,
-            Err(_) => return false,
-        };
-
-        // Decode expected hash.
-        let expected_hash = match STANDARD_NO_PAD.decode(parts[4]) {
-            Ok(b) => b,
-            Err(_) => return false,
-        };
-
-        // Re-derive key with the extracted parameters.
-        let output_len = expected_hash.len();
-        let mut computed_hash = vec![0u8; output_len];
-        pbkdf2_hmac::<Sha256>(
-            password.as_bytes(),
-            &salt_bytes,
-            iterations,
-            &mut computed_hash,
-        );
-
-        // Constant-time comparison to prevent timing attacks.
-        constant_time_password_eq(&computed_hash, &expected_hash)
+        // PBKDF2 is CPU-bound (~200-500 ms at 600k iterations). Run it on the
+        // blocking pool so the async worker thread is never blocked.
+        tokio::task::spawn_blocking(move || verify_sync(&password, &encoded, default_iterations))
+            .await
+            .unwrap_or(false)
     }
+}
+
+/// Synchronous PBKDF2 verification core (runs on a blocking thread).
+///
+/// Splits the PHC string and re-derives the key. Returns `false` for malformed
+/// hashes, unknown algorithms, or insufficient iteration counts so that a
+/// weakened or injected hash is never accepted.
+fn verify_sync(password: &str, encoded: &str, default_iterations: u32) -> bool {
+    // Split on '$'. Expected format:
+    //   [0] ""  [1] "pbkdf2-sha256"  [2] "i=N,l=32"  [3] salt_b64  [4] hash_b64
+    let parts: Vec<&str> = encoded.split('$').collect();
+    if parts.len() != 5 {
+        return false;
+    }
+
+    // Validate algorithm identifier.
+    if parts[1] != "pbkdf2-sha256" {
+        return false;
+    }
+
+    // Parse iterations from the parameters segment.
+    const MIN_ITERATIONS: u32 = 100_000;
+
+    let iterations: u32 = parts[2]
+        .split(',')
+        .find_map(|param| param.strip_prefix("i="))
+        .and_then(|val| val.parse::<u32>().ok())
+        .unwrap_or(default_iterations);
+
+    // Reject hashes with fewer than the minimum iterations to prevent
+    // trivial brute-forcing if an attacker has injected a weak hash
+    // (e.g. i=1) into the database.
+    if iterations < MIN_ITERATIONS {
+        return false;
+    }
+
+    // Decode salt.
+    let salt_bytes = match STANDARD_NO_PAD.decode(parts[3]) {
+        Ok(b) => b,
+        Err(_) => return false,
+    };
+
+    // Decode expected hash.
+    let expected_hash = match STANDARD_NO_PAD.decode(parts[4]) {
+        Ok(b) => b,
+        Err(_) => return false,
+    };
+
+    // Re-derive key with the extracted parameters.
+    let output_len = expected_hash.len();
+    let mut computed_hash = vec![0u8; output_len];
+    pbkdf2_hmac::<Sha256>(
+        password.as_bytes(),
+        &salt_bytes,
+        iterations,
+        &mut computed_hash,
+    );
+
+    // Constant-time comparison to prevent timing attacks.
+    constant_time_password_eq(&computed_hash, &expected_hash)
 }
 
 /// Compare two byte slices in constant time for password verification.
@@ -173,7 +190,7 @@ mod tests {
         let hasher = Pbkdf2Hasher::new(100_000);
         let hash = hasher.hash("correct-horse-battery-staple").await.unwrap();
 
-        assert!(hasher.verify("correct-horse-battery-staple", &hash));
+        assert!(hasher.verify("correct-horse-battery-staple", &hash).await);
     }
 
     #[tokio::test]
@@ -181,13 +198,13 @@ mod tests {
         let hasher = Pbkdf2Hasher::new(100_000);
         let hash = hasher.hash("real-password").await.unwrap();
 
-        assert!(!hasher.verify("wrong-password", &hash));
+        assert!(!hasher.verify("wrong-password", &hash).await);
     }
 
     #[tokio::test]
     async fn reject_malformed_hash() {
         let hasher = Pbkdf2Hasher::default();
-        assert!(!hasher.verify("anything", "not-a-valid-phc-string"));
+        assert!(!hasher.verify("anything", "not-a-valid-phc-string").await);
     }
 
     #[test]
