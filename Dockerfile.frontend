@@ -1,0 +1,75 @@
+# syntax=docker/dockerfile:1
+#
+# HOA TCMS — frontend image.
+#
+# Builds the Leptos SSR server binary plus the WASM client bundle with
+# `cargo leptos`, then copies the binary and static `site/` output into a
+# slim runtime image.
+
+# ---------------------------------------------------------------------------
+# Stage 1 — Builder
+# ---------------------------------------------------------------------------
+FROM rust:1.97-bookworm AS builder
+
+WORKDIR /app
+
+# wasm32 target for the client-side WASM bundle.
+RUN rustup target add wasm32-unknown-unknown \
+    && cargo install cargo-leptos
+
+# Cache dependency downloads across source edits. All workspace member
+# manifests (and their referenced sources) must exist so `cargo fetch` can
+# resolve the workspace — hence copying cmd/internal/pkg/frontend wholesale.
+COPY Cargo.toml Cargo.lock ./
+COPY cmd/ cmd/
+COPY internal/ internal/
+COPY pkg/ pkg/
+COPY frontend/ frontend/
+RUN cargo fetch
+
+# Copy the full workspace and build the frontend in production mode.
+COPY . .
+
+# TCMS_API_BASE is read at compile time (option_env!) — it is the URL the
+# *browser* uses to reach the backend. The default matches the backend port
+# exposed on the host; override with `--build-arg TCMS_API_BASE=...`.
+ARG TCMS_API_BASE=http://localhost:8080
+ENV TCMS_API_BASE=$TCMS_API_BASE \
+    LEPTOS_ENV=PROD
+
+WORKDIR /app/frontend
+# `--bin-features ssr --lib-features hydrate` are required: without them
+# cargo-leptos builds the bin/lib with NO features (empty main + no hydrate),
+# producing a stub binary and a non-functional WASM bundle.
+RUN cargo leptos build --release --bin-features ssr --lib-features hydrate
+
+# ---------------------------------------------------------------------------
+# Stage 2 — Runtime
+# ---------------------------------------------------------------------------
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# SSR server binary (named after the bin target; lives in the workspace-root
+# target dir). cargo-leptos bakes the Leptos config (output-name, etc.) into it.
+COPY --from=builder /app/target/release/hoa-tcms-frontend /usr/local/bin/hoa-frontend
+# Static site (pkg/ WASM bundle + compiled CSS) — served by the binary's
+# file_and_error_handler from LEPTOS_SITE_ROOT.
+COPY --from=builder /app/target/site/ /app/site/
+
+# Leptos reads these at runtime; they override the compile-time metadata
+# (site-addr / site-root in [package.metadata.leptos]).
+ENV LEPTOS_SITE_ADDR=0.0.0.0:3000 \
+    LEPTOS_SITE_ROOT=/app/site \
+    LEPTOS_ENV=PROD
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=5 \
+    CMD curl -fsS http://localhost:3000/ || exit 1
+
+CMD ["/usr/local/bin/hoa-frontend"]

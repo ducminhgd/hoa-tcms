@@ -7,7 +7,7 @@
 # Override with: make migrate DATABASE_URL="postgres://..."
 DATABASE_URL ?= postgres://tcms:tcms_pass@localhost:5432/hoa_tcms
 
-.PHONY: help build test lint fmt dev run frontend frontend-build clean migrate migrate-revert migrate-info seed migrate-all createsuperuser gen-perms docker-up docker-down
+.PHONY: help build test lint fmt dev run frontend frontend-build clean migrate migrate-revert migrate-info seed migrate-all createsuperuser gen-perms docker-up docker-build docker-down
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -78,8 +78,11 @@ run: ## Start the server
 frontend: ## Start the Leptos frontend with hot-reload (requires cargo-leptos)
 	cd frontend && cargo leptos serve
 
-frontend-build: ## Build the Leptos frontend for production
-	cd frontend && cargo leptos build
+# NOTE: --bin-features ssr --lib-features hydrate are required. cargo-leptos
+# does not enable them by default, which produces a stub binary (empty main)
+# and a WASM bundle with no hydrate entry point.
+frontend-build: ## Build the Leptos frontend for production (SSR + WASM)
+	cd frontend && cargo leptos build --release --bin-features ssr --lib-features hydrate
 
 # ------------------------------------------------------------------
 # Database
@@ -117,16 +120,19 @@ createsuperuser: ## Create a superuser (added to System Admin group)
 # Docker
 # ------------------------------------------------------------------
 
-docker-up: ## Start dev services (PostgreSQL + Redis)
-	docker compose up -d
+docker-up: ## Build and start the full stack (infra + backend + frontend)
+	docker compose up -d --build
 
-docker-down: ## Stop dev services
+docker-build: ## Build all Docker images (backend + frontend)
+	docker compose build
+
+docker-down: ## Stop all services
 	docker compose down
 
-docker-logs: ## View dev service logs
+docker-logs: ## View all service logs
 	docker compose logs -f
 
-docker-restart: ## Restart dev services
+docker-restart: ## Restart all services
 	docker compose restart
 
 # ------------------------------------------------------------------

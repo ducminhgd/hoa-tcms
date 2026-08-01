@@ -1,14 +1,29 @@
-use gloo_net::http::Request;
 use leptos::prelude::*;
 
+#[cfg(feature = "hydrate")]
 use crate::API_BASE;
+#[cfg(feature = "hydrate")]
+use gloo_net::http::Request;
 
 #[component]
 pub fn ProjectsPage() -> impl IntoView {
-    let (projects, set_projects) = signal(Vec::new());
+    // Explicit element type: the fetch effect that populates this signal is
+    // compiled out of the SSR build (browser-only), so inference alone would
+    // leave `Vec::new()` untyped. The write-handles are only used by the
+    // hydrate-gated effect below, hence the `allow(unused_variables)` in the
+    // SSR (non-hydrate) build.
+    #[cfg_attr(not(feature = "hydrate"), allow(unused_variables))]
+    let (projects, set_projects) = signal(Vec::<serde_json::Value>::new());
+    #[cfg_attr(not(feature = "hydrate"), allow(unused_variables))]
     let (loading, set_loading) = signal(true);
+    #[cfg_attr(not(feature = "hydrate"), allow(unused_variables))]
     let (error, set_error) = signal(String::new());
 
+    // Fetch only on the client (hydrate build): `gloo_net` + `spawn_local`
+    // are browser-only APIs and panic during SSR (`spawn_local` called from
+    // outside a LocalSet). The server render shows the "Loading..." state;
+    // the WASM bundle performs the actual request after hydration.
+    #[cfg(feature = "hydrate")]
     Effect::new(move || {
         leptos::task::spawn_local(async move {
             let resp = Request::get(&format!("{}/api/v1/projects", API_BASE))

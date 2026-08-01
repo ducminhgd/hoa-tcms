@@ -4,10 +4,9 @@
 #[tokio::main]
 async fn main() {
     use axum::Router;
-    use hoa_tcms_frontend::app::App;
+    use hoa_tcms_frontend::app::{App, shell};
     use leptos::prelude::*;
-    use leptos_axum::{LeptosRoutes, generate_route_list};
-    use tower_http::services::ServeDir;
+    use leptos_axum::{LeptosRoutes, file_and_error_handler, generate_route_list};
 
     let conf = get_configuration(None).unwrap();
     let leptos_options = conf.leptos_options;
@@ -15,8 +14,11 @@ async fn main() {
     let routes = generate_route_list(App);
 
     let app = Router::new()
-        .leptos_routes(&leptos_options, routes, || view! { <App /> })
-        .fallback_service(ServeDir::new(&*leptos_options.site_root))
+        .leptos_routes(&leptos_options, routes, {
+            let leptos_options = leptos_options.clone();
+            move || shell(leptos_options.clone())
+        })
+        .fallback(file_and_error_handler(shell))
         .with_state(leptos_options);
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
