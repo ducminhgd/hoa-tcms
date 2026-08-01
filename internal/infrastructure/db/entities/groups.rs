@@ -10,11 +10,11 @@ pub struct Model {
     pub description: Option<String>,
     pub status: String,
     pub created_by: Option<i64>,
-    pub created_at: DateTime,
+    pub created_at: DateTimeUtc,
     pub updated_by: Option<i64>,
-    pub updated_at: DateTime,
+    pub updated_at: DateTimeUtc,
     pub deleted_by: Option<i64>,
-    pub deleted_at: Option<DateTime>,
+    pub deleted_at: Option<DateTimeUtc>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

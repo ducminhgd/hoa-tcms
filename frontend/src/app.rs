@@ -5,12 +5,36 @@ use leptos_router::path;
 
 use crate::pages;
 
+/// Renders the full HTML document shell around the app.
+///
+/// This is required for SSR: `leptos_meta` (e.g. `<Title>`) injects tags into
+/// the streamed HTML at the `</head>` marker, so the shell must emit the
+/// `<html>`/`<head>`/`<body>` skeleton. Without it, SSR panics with
+/// "you are using leptos_meta without a </head> tag".
+pub fn shell(options: LeptosOptions) -> impl IntoView {
+    view! {
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <AutoReload options=options.clone()/>
+                <HydrationScripts options/>
+                <MetaTags/>
+            </head>
+            <body>
+                <App/>
+            </body>
+        </html>
+    }
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        <Html attr:lang="en" />
+        <Stylesheet id="leptos" href="/pkg/hoa-frontend.css"/>
         <Title text="HOA TCMS" />
 
         <Router>

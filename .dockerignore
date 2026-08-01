@@ -1,0 +1,25 @@
+# Build artifacts
+target/
+frontend/target/
+
+# VCS / tooling
+.git/
+.gitnexus/
+.github/
+.vscode/
+node_modules/
+
+# Local data / leftovers
+uploads/
+frontend-temp/
+storage/
+
+# Docs and IDE files
+docs/
+*.md
+*.iml
+
+# Environment secrets — never ship .env into an image
+.env
+.env.*
+!.env.example

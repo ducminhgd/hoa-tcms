@@ -9,7 +9,7 @@
 //! `app.current_user_id` is not set.
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use sea_orm::sea_query::Expr;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait,
@@ -52,13 +52,11 @@ fn model_to_entity(model: groups::Model) -> RepositoryResult<Group> {
         description: model.description,
         status,
         created_by: model.created_by,
-        created_at: DateTime::<Utc>::from_naive_utc_and_offset(model.created_at, Utc),
+        created_at: model.created_at,
         updated_by: model.updated_by,
-        updated_at: DateTime::<Utc>::from_naive_utc_and_offset(model.updated_at, Utc),
+        updated_at: model.updated_at,
         deleted_by: model.deleted_by,
-        deleted_at: model
-            .deleted_at
-            .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
+        deleted_at: model.deleted_at,
     })
 }
 
@@ -142,7 +140,7 @@ impl GroupRepository for SqlGroupRepository {
             .filter(groups::Column::Id.eq(id))
             .filter(groups::Column::DeletedAt.is_null())
             .set(groups::ActiveModel {
-                deleted_at: Set(Some(Utc::now().naive_utc())),
+                deleted_at: Set(Some(Utc::now())),
                 deleted_by: Set(Some(deleted_by)),
                 ..Default::default()
             })

@@ -9,7 +9,6 @@
 //! back to it when the session parameter is not set.
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use sea_orm::sea_query::Expr;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
@@ -54,13 +53,11 @@ fn model_to_role(model: roles::Model) -> RepositoryResult<Role> {
         is_system: model.is_system,
         description: model.description,
         created_by: model.created_by,
-        created_at: DateTime::<Utc>::from_naive_utc_and_offset(model.created_at, Utc),
+        created_at: model.created_at,
         updated_by: model.updated_by,
-        updated_at: DateTime::<Utc>::from_naive_utc_and_offset(model.updated_at, Utc),
+        updated_at: model.updated_at,
         deleted_by: model.deleted_by,
-        deleted_at: model
-            .deleted_at
-            .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
+        deleted_at: model.deleted_at,
     })
 }
 
@@ -69,7 +66,7 @@ fn permission_model_to_entity(model: permissions::Model) -> Permission {
         id: model.id,
         name: model.name,
         code: model.code,
-        created_at: DateTime::<Utc>::from_naive_utc_and_offset(model.created_at, Utc),
+        created_at: model.created_at,
     }
 }
 

@@ -6,7 +6,6 @@
 //! repository exposes only read operations using SeaORM.
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use sea_orm::{
     ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
@@ -37,7 +36,7 @@ fn model_to_entity(model: permissions::Model) -> Permission {
         id: model.id,
         name: model.name,
         code: model.code,
-        created_at: DateTime::<Utc>::from_naive_utc_and_offset(model.created_at, Utc),
+        created_at: model.created_at,
     }
 }
 

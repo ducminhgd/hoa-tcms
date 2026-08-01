@@ -13,6 +13,14 @@ use crate::application::services::session_store::SessionStore;
 use crate::domain::entities::session::Session;
 use crate::domain::entities::user::User;
 
+/// Dummy PHC-encoded PBKDF2 hash used when the identifier is unknown.
+///
+/// It is a valid 600 000-iteration hash (never matches any real password), so
+/// running a verification against it makes the unknown-identifier path take the
+/// same time as the known-identifier path — closing the timing side-channel
+/// that would otherwise let an attacker enumerate valid usernames.
+const DUMMY_PASSWORD_HASH: &str = "$pbkdf2-sha256$i=600000,l=32$AAECAwQFBgcICQoLDA0ODw$AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
+
 /// Authentication use cases.
 pub struct AuthService {
     user_repo: Box<dyn UserRepository>,
@@ -37,9 +45,10 @@ impl AuthService {
     /// Authenticate a user by username or email and create a session.
     ///
     /// Returns the authenticated [`User`] and the newly created [`Session`]
-    /// on success. Fails with a generic error for both unknown credentials
-    /// and wrong passwords so the endpoint does not leak which usernames
-    /// exist (prevents username enumeration).
+    /// on success. Fails with the same generic `NotFound` for an unknown
+    /// identifier, a wrong password, or an inactive account so the endpoint
+    /// never reveals whether a username exists or is merely disabled. The
+    /// timing of all failure paths is also equalized (see [`DUMMY_PASSWORD_HASH`]).
     pub async fn login(
         &self,
         username_or_email: &str,
@@ -55,18 +64,29 @@ impl AuthService {
             Some(u) => u,
             None => match self.user_repo.find_by_email(ident).await? {
                 Some(u) => u,
-                None => return Err(ServiceError::NotFound),
+                None => {
+                    // Run a dummy verification so the unknown-identifier path
+                    // takes as long as the known-identifier path.
+                    self.password_hasher
+                        .verify(password, DUMMY_PASSWORD_HASH)
+                        .await;
+                    return Err(ServiceError::NotFound);
+                }
             },
         };
 
-        if !self.password_hasher.verify(password, &user.password_hash) {
+        if !self
+            .password_hasher
+            .verify(password, &user.password_hash)
+            .await
+        {
             return Err(ServiceError::NotFound);
         }
 
+        // An inactive account is indistinguishable from bad credentials: the
+        // account may exist but the endpoint must not say so.
         if !user.is_active() {
-            return Err(ServiceError::PermissionDenied(
-                "account is not active".into(),
-            ));
+            return Err(ServiceError::NotFound);
         }
 
         let session = self
@@ -140,7 +160,7 @@ mod tests {
         async fn hash(&self, password: &str) -> Result<String, String> {
             Ok(password.to_string())
         }
-        fn verify(&self, password: &str, hash: &str) -> bool {
+        async fn verify(&self, password: &str, hash: &str) -> bool {
             password == hash
         }
     }
@@ -234,12 +254,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn login_rejects_inactive_user() {
+    async fn login_rejects_inactive_user_with_generic_error() {
         let mut user = active_user("alice", "alice@example.com");
         user.status = crate::domain::value_objects::user_status::UserStatus::Inactive;
         let service = service_with(vec![user]);
         let err = service.login("alice", "secret", None).await.unwrap_err();
-        assert!(matches!(err, ServiceError::PermissionDenied(_)));
+        // Must be the same generic error as bad credentials so the endpoint
+        // does not reveal that the account exists but is disabled.
+        assert!(matches!(err, ServiceError::NotFound));
+    }
+
+    #[tokio::test]
+    async fn login_unknown_user_returns_not_found() {
+        let service = service_with(vec![active_user("alice", "alice@example.com")]);
+        let err = service.login("ghost", "secret", None).await.unwrap_err();
+        assert!(matches!(err, ServiceError::NotFound));
     }
 
     #[tokio::test]

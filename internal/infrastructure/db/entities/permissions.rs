@@ -13,7 +13,7 @@ pub struct Model {
     pub id: i64,
     pub name: String,
     pub code: String,
-    pub created_at: DateTime,
+    pub created_at: DateTimeUtc,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

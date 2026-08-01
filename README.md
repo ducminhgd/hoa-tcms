@@ -43,6 +43,42 @@ make frontend
 # → http://localhost:3000
 ```
 
+## Docker (full stack)
+
+The `docker-compose.yml` runs the **entire stack** — PostgreSQL, Redis, database
+migrations, the Actix-Web backend, and the Leptos frontend — behind a single
+command. No Rust toolchain or sqlx-cli is needed on the host.
+
+```bash
+# 1. Ensure .env has a strong SESSION_SECRET (the compose file requires it)
+openssl rand -base64 32 | xargs -I{} sed -i "s/CHANGE_ME_TO_A_RANDOM_SECRET/{}/" .env
+
+# 2. Build and start everything
+make docker-up            # = docker compose up -d --build
+
+# 3. Verify
+curl http://localhost:8080/api/v1/health   # backend  → {"status":"ok",...}
+curl http://localhost:3000/                # frontend → HTML (SSR)
+
+# 4. Create a superuser once the stack is up
+docker compose exec backend createsuperuser \
+  --username admin --email admin@hoa.local --password 'your-pass' --fullname "System Admin"
+
+# 5. Tear down
+make docker-down          # = docker compose down
+```
+
+Service startup order is enforced by healthchecks:
+`postgres`/`redis` (healthy) → `migrate` (runs sqlx migrations + seed, exits) →
+`backend` (healthy) → `frontend` (healthy).
+
+| `make` target | Description |
+|---|---|
+| `docker-up` | Build images and start the full stack |
+| `docker-build` | Rebuild backend + frontend images |
+| `docker-down` | Stop the stack |
+| `docker-logs` | Tail all service logs |
+
 ## Front-End
 
 The frontend is built with [Leptos](https://leptos.dev/) — a Rust full-stack web framework.
@@ -51,9 +87,14 @@ It uses **server-side rendering (SSR)** for fast initial loads and **WASM hydrat
 | Command | Description |
 |---|---|
 | `make frontend` | Start the Leptos dev server with hot-reload (SSR + WASM) |
-| `make frontend-build` | Build the frontend for production |
+| `make frontend-build` | Build the frontend for production (SSR + WASM) |
 | `cargo leptos serve` | Alias if run from the `frontend/` directory |
 | `cargo leptos watch` | Watch mode (same as `serve` without the server) |
+
+> **Note:** cargo-leptos does not enable the `ssr`/`hydrate` features by default —
+> without them it builds a stub binary and a WASM bundle with no hydrate entry
+> point. `make frontend-build` passes `--bin-features ssr --lib-features hydrate`
+> automatically; the Docker image uses the same flags.
 
 The `[package.metadata.leptos]` section in `frontend/Cargo.toml` controls the configuration:
 
@@ -66,7 +107,7 @@ site-pkg-dir = "pkg"
 assets-dir = "public"
 style-file = "output.css"
 env = "DEV"
-site-addr = "127.0.0.1:3000"
+site-addr = "0.0.0.0:3000"
 reload-port = 3001
 ```
 

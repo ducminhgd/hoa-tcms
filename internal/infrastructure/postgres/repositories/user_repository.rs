@@ -7,7 +7,7 @@
 //! rationale), so all UPDATE queries set `updated_at` explicitly.
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use sea_orm::sea_query::Expr;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait,
@@ -52,13 +52,11 @@ fn model_to_entity(model: users::Model) -> RepositoryResult<User> {
         fullname: model.fullname,
         status,
         created_by: model.created_by,
-        created_at: DateTime::<Utc>::from_naive_utc_and_offset(model.created_at, Utc),
+        created_at: model.created_at,
         updated_by: model.updated_by,
-        updated_at: DateTime::<Utc>::from_naive_utc_and_offset(model.updated_at, Utc),
+        updated_at: model.updated_at,
         deleted_by: model.deleted_by,
-        deleted_at: model
-            .deleted_at
-            .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
+        deleted_at: model.deleted_at,
     })
 }
 
@@ -142,7 +140,7 @@ impl UserRepository for SqlUserRepository {
             fullname: Set(user.fullname.clone()),
             status: Set(user.status.to_string()),
             updated_by: Set(user.updated_by),
-            updated_at: Set(Utc::now().naive_utc()),
+            updated_at: Set(Utc::now()),
             // Preserve soft-delete state from the existing row so a concurrent
             // soft_delete cannot be reverted.
             deleted_at: Set(existing.deleted_at),
@@ -162,7 +160,7 @@ impl UserRepository for SqlUserRepository {
             .filter(users::Column::Id.eq(id))
             .filter(users::Column::DeletedAt.is_null())
             .set(users::ActiveModel {
-                deleted_at: Set(Some(Utc::now().naive_utc())),
+                deleted_at: Set(Some(Utc::now())),
                 deleted_by: Set(Some(deleted_by)),
                 ..Default::default()
             })
@@ -209,7 +207,7 @@ impl UserRepository for SqlUserRepository {
             .filter(users::Column::DeletedAt.is_null())
             .set(users::ActiveModel {
                 password_hash: Set(password_hash.to_owned()),
-                updated_at: Set(Utc::now().naive_utc()),
+                updated_at: Set(Utc::now()),
                 ..Default::default()
             })
             .exec(&self.db)

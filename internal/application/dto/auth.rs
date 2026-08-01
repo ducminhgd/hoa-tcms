@@ -15,7 +15,14 @@ pub struct LoginRequest {
 }
 
 impl LoginRequest {
-    /// Validate that required fields are present.
+    /// Maximum accepted password length, in bytes.
+    ///
+    /// Bounds the cost of PBKDF2 verification (which scales with input size) so
+    /// an unauthenticated caller cannot send a multi-megabyte password and tie
+    /// up a blocking worker for seconds per request.
+    pub const MAX_PASSWORD_LEN: usize = 1024;
+
+    /// Validate that required fields are present and within bounds.
     pub fn validate(&self) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
         if self.username_or_email.trim().is_empty() {
@@ -23,6 +30,11 @@ impl LoginRequest {
         }
         if self.password.is_empty() {
             errors.push("password is required".to_string());
+        } else if self.password.len() > Self::MAX_PASSWORD_LEN {
+            errors.push(format!(
+                "password must be at most {} characters",
+                Self::MAX_PASSWORD_LEN
+            ));
         }
         if errors.is_empty() {
             Ok(())
