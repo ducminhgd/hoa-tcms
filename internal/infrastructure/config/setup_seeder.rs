@@ -83,9 +83,7 @@ impl ConfigFileSetupSeeder {
     pub fn new(db: &DatabaseConnection, config: SetupConfig) -> Self {
         // Clone the underlying sqlx::PgPool to run raw SQL and avoid
         // chrono type-mapping issues with SeaORM's DateTime type.
-        let pool = db
-            .get_postgres_connection_pool()
-            .clone();
+        let pool = db.get_postgres_connection_pool().clone();
         Self { pool, config }
     }
 
@@ -161,22 +159,20 @@ impl ConfigFileSetupSeeder {
                 continue;
             }
 
-            let (group_id,): (i64,) = sqlx::query_as(
-                "SELECT id FROM groups WHERE name = $1 AND deleted_at IS NULL",
-            )
-            .bind(&entry.name)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e| RepositoryError::Database(e.to_string()))?;
+            let (group_id,): (i64,) =
+                sqlx::query_as("SELECT id FROM groups WHERE name = $1 AND deleted_at IS NULL")
+                    .bind(&entry.name)
+                    .fetch_one(&self.pool)
+                    .await
+                    .map_err(|e| RepositoryError::Database(e.to_string()))?;
 
             for role_name in &entry.roles {
-                let (role_id,): (i64,) = sqlx::query_as(
-                    "SELECT id FROM roles WHERE name = $1 AND deleted_at IS NULL",
-                )
-                .bind(role_name)
-                .fetch_one(&self.pool)
-                .await
-                .map_err(|e| RepositoryError::Database(e.to_string()))?;
+                let (role_id,): (i64,) =
+                    sqlx::query_as("SELECT id FROM roles WHERE name = $1 AND deleted_at IS NULL")
+                        .bind(role_name)
+                        .fetch_one(&self.pool)
+                        .await
+                        .map_err(|e| RepositoryError::Database(e.to_string()))?;
 
                 sqlx::query(
                     "INSERT INTO group_roles (group_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
