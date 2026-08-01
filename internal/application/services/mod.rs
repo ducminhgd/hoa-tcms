@@ -11,6 +11,7 @@
 //! Implementations of these traits live in the infrastructure layer
 //! (e.g. `infrastructure::auth`, `infrastructure::cache`).
 
+pub mod auth_service;
 pub mod authorization;
 pub mod errors;
 pub mod password_hasher;

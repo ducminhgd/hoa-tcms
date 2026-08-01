@@ -28,6 +28,9 @@ pub struct Role {
     /// Set via the `is_system` column in the database.
     pub is_system: bool,
 
+    /// Human-readable summary of the role's purpose.
+    pub description: Option<String>,
+
     /// ID of the user who created this role. `None` for pre-seeded roles.
     pub created_by: Option<i64>,
 
@@ -57,12 +60,14 @@ impl Role {
     /// # Arguments
     ///
     /// * `name` — Unique role name.
+    /// * `description` — Optional human-readable summary.
     /// * `created_by` — ID of the creating user, or `None` for seeded roles.
-    pub fn create(name: String, created_by: Option<i64>) -> Self {
+    pub fn create(name: String, description: Option<String>, created_by: Option<i64>) -> Self {
         let now = Utc::now();
         Self {
             id: 0,
             name,
+            description,
             status: RoleStatus::Active,
             is_system: false,
             created_by,
@@ -89,7 +94,7 @@ mod tests {
 
     #[test]
     fn create_role_with_creator() {
-        let role = Role::create("Tester".into(), Some(1));
+        let role = Role::create("Tester".into(), Some("Test executor".into()), Some(1));
         assert_eq!(role.name, "Tester");
         assert_eq!(role.status, RoleStatus::Active);
         assert!(!role.is_system);
@@ -99,21 +104,21 @@ mod tests {
 
     #[test]
     fn create_role_without_creator() {
-        let role = Role::create("Seeded Role".into(), None);
+        let role = Role::create("Seeded Role".into(), None, None);
         assert!(role.created_by.is_none());
         assert!(role.updated_by.is_none());
     }
 
     #[test]
     fn system_role_is_protected() {
-        let mut role = Role::create("Any Name".into(), None);
+        let mut role = Role::create("Any Name".into(), None, None);
         role.is_system = true;
         assert!(role.is_protected());
     }
 
     #[test]
     fn non_system_role_is_not_protected() {
-        let role = Role::create("Tester".into(), None);
+        let role = Role::create("Tester".into(), None, None);
         assert!(!role.is_protected());
     }
 }

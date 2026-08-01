@@ -11,6 +11,9 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         web::scope("/api/v1")
             // Health check (no auth required)
             .route("/health", web::get().to(health_check))
+            // Auth routes
+            .route("/auth/login", web::post().to(login))
+            .route("/auth/logout", web::post().to(logout))
             // Project routes (Milestone 3)
             .route("/projects", web::get().to(list_projects))
             .route("/projects", web::post().to(create_project))
@@ -152,6 +155,28 @@ async fn health_check(
             "redis": if redis_healthy { "healthy" } else { "unreachable" },
         }
     }))
+}
+
+// ---------------------------------------------------------------------------
+// Auth handlers — delegates to AuthHandler
+// ---------------------------------------------------------------------------
+
+use crate::adapters::http::handlers::auth_handler::AuthHandler;
+use crate::application::dto::auth::LoginRequest;
+
+async fn login(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<AuthHandler>>,
+    body: web::Json<LoginRequest>,
+) -> actix_web::HttpResponse {
+    handler.login(req, body).await
+}
+
+async fn logout(
+    req: actix_web::HttpRequest,
+    handler: web::Data<std::sync::Arc<AuthHandler>>,
+) -> actix_web::HttpResponse {
+    handler.logout(req).await
 }
 
 // ---------------------------------------------------------------------------

@@ -1,20 +1,23 @@
-//! HOA TCMS — Leptos frontend (Client-Side Rendering).
-//!
-//! This crate contains the WASM client that runs in the browser. It calls the
-//! REST API served by the Actix-Web backend.
+//! HOA TCMS — Leptos frontend library (shared by WASM and SSR).
 
-pub mod api;
 pub mod app;
-pub mod components;
-pub mod layouts;
 pub mod pages;
 
-use wasm_bindgen::prelude::*;
+/// Base URL of the HOA TCMS backend API.
+///
+/// Override at build time with the `TCMS_API_BASE` environment variable
+/// (e.g. via the cargo-leptos `.env` file). Defaults to the local dev backend.
+pub const API_BASE: &str = match option_env!("TCMS_API_BASE") {
+    Some(v) => v,
+    None => "http://localhost:8080",
+};
 
-/// Entry point called from the HTML page on load.
-#[wasm_bindgen(start)]
-pub fn main() {
-    console_log::init_with_level(log::Level::Debug).ok();
+/// Client-side hydration entry point, called by cargo-leptos in the browser.
+#[cfg(feature = "hydrate")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn hydrate() {
     console_error_panic_hook::set_once();
-    leptos::mount::mount_to_body(app::App);
+    _ = console_log::init_with_level(log::Level::Debug);
+
+    leptos::mount::hydrate_body(|| leptos::prelude::view! { <app::App /> });
 }

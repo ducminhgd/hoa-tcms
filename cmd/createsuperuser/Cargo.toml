@@ -1,0 +1,18 @@
+[package]
+name = "hoa-tcms-createsuperuser"
+version.workspace = true
+edition.workspace = true
+description = "HOA TCMS — create a superuser with full system access"
+
+[dependencies]
+hoa-tcms-core = { path = "../../internal" }
+rpassword = "5"
+sqlx.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+dotenvy.workspace = true
+
+[[bin]]
+name = "createsuperuser"
+path = "main.rs"

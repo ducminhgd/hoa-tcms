@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""Generate CRUD permission entries for one or more resource models.
+
+Outputs YAML snippets that can be pasted into `config/default-setup.yaml`.
+
+Usage:
+  ./scripts/gen-permissions user group role              # standard CRUD × 6
+  ./scripts/gen-permissions --actions create read delete share  # custom actions
+  ./scripts/gen-permissions --help
+"""
+
+import argparse
+import re
+import sys
+from typing import List
+
+
+# Standard CRUD actions mapped to human-readable action names.
+STANDARD_ACTIONS = [
+    ("create",     "Create"),
+    ("read",       "Read"),
+    ("read_list",  "List"),       # collection endpoint
+    ("update",     "Update"),
+    ("select",     "Select"),     # dropdown / autocomplete
+    ("delete",     "Delete"),
+]
+
+# Models with non-standard action sets.
+SPECIAL_MODELS: dict[str, list[tuple[str, str]]] = {
+    "permission": [
+        ("read_list", "List"),
+    ],
+    "share": [
+        ("create", "Create"),
+        ("read",   "Read"),
+        ("delete", "Delete"),
+    ],
+    "test_case_file": [
+        ("upload", "Upload"),
+        ("read",   "Read"),
+        ("delete", "Delete"),
+    ],
+}
+
+
+def pascal_case(snake: str) -> str:
+    """Convert snake_case to Pascal Case (space-separated)."""
+    return " ".join(word.capitalize() for word in snake.split("_"))
+
+
+def generate_entries(
+    model: str,
+    actions: list[tuple[str, str]],
+) -> list[str]:
+    """Return a list of YAML entry strings for a model."""
+    name = pascal_case(model)
+    entries: list[str] = []
+    # Drop a section comment for the first entry of each model.
+    entries.append(f"  # {name}")
+    for code_suffix, label in actions:
+        code = f"{model}:{code_suffix}"
+        full_name = f"{label} {name}"
+        entries.append(f'  - {{ code: "{code}", name: "{full_name}" }}')
+    entries.append("")  # blank line after group
+    return entries
+
+
+def parse_actions(raw: list[str]) -> list[tuple[str, str]]:
+    """Parse a list of action specifiers into (code_suffix, label) pairs."""
+    pairs: list[tuple[str, str]] = []
+    for item in raw:
+        item = item.strip()
+        if item in {"create", "read", "read_list", "update", "select", "delete",
+                    "upload"}:
+            pairs.append((item, pascal_case(item)))
+        else:
+            # Assume custom action: use as-is for code, PascalCase for label.
+            pairs.append((item, pascal_case(item)))
+    return pairs
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Generate CRUD permission entries for resource models.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  %(prog)s user group role\n"
+            "  %(prog)s --actions create read update delete invoice\n"
+            "  %(prog)s permission share test_case_file   # auto-detects special models"
+        ),
+    )
+    parser.add_argument(
+        "models",
+        nargs="*",
+        help="Resource model names in snake_case (e.g. test_case, project).",
+    )
+    parser.add_argument(
+        "--actions",
+        nargs="+",
+        default=None,
+        help=(
+            "Custom action list (code suffixes). Overrides the default 6-action "
+            "CRUD set and the built-in special-model rules."
+        ),
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Generate entries for ALL models currently in the config file.",
+    )
+    args = parser.parse_args()
+
+    if not args.models and not args.all:
+        parser.print_help()
+        sys.exit(1)
+
+    models: list[str] = []
+
+    if args.all:
+        # Auto-detect all resource prefixes from the current config.
+        config_path = "config/default-setup.yaml"
+        try:
+            with open(config_path) as fh:
+                codes = re.findall(r'code:\s*"([a-z_]+):', fh.read())
+            models = sorted(set(codes))
+        except FileNotFoundError:
+            print(f"error: {config_path} not found — run from project root", file=sys.stderr)
+            sys.exit(1)
+    else:
+        models = args.models
+
+    if args.actions is not None:
+        actions = parse_actions(args.actions)
+    else:
+        actions = []  # means "use defaults per model"
+
+    print("# Paste the following into config/default-setup.yaml under 'permissions:'")
+    print()
+
+    for model in models:
+        if actions:
+            entries = generate_entries(model, actions)
+        elif model in SPECIAL_MODELS:
+            entries = generate_entries(model, SPECIAL_MODELS[model])
+        else:
+            entries = generate_entries(model, STANDARD_ACTIONS)
+        for line in entries:
+            print(line)
+
+
+if __name__ == "__main__":
+    main()

@@ -7,7 +7,7 @@ pub struct Model {
     pub role_id: i64,
     #[sea_orm(primary_key)]
     pub permission_id: i64,
-    pub created_at: chrono::DateTime<chrono::FixedOffset>,
+    pub created_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

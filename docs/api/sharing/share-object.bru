@@ -5,29 +5,16 @@ meta {
 }
 
 post {
-  url: {{baseUrl}}/api/v1/share
+  url: {{baseUrl}}/api/v1/sharing
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "user_id": 2,
-    "resource_type": "test_case",
-    "resource_id": 1,
+    "userId": 2,
+    "resourceType": "test_case",
+    "resourceId": 1,
     "role": "Editor"
   }
-}
-
-docs {
-  # Share Object
-
-  Shares an object with a specific user, overriding their project membership role for that
-  object. Valid resource types: project, test_plan, test_case, test_run, test_execution.
-  Valid sharing roles: Editor, Contributor, Viewer. Requires `share:create` permission.
-
-  - `201 Created` — share created, `Location` header set
-  - `403 Forbidden` — missing permission
-  - `409 Conflict` — user already has a sharing record for this resource
-  - `422 Unprocessable Entity` — invalid resource type or role
 }
