@@ -5,6 +5,7 @@
 //! (database pool, Redis client) and registers it with the HTTP server
 //! so all handlers can access it via `web::Data<AppState>`.
 
+use actix_cors::Cors;
 use actix_web::web;
 use sea_orm::SqlxPostgresConnector;
 use std::net::TcpListener;
@@ -12,13 +13,17 @@ use std::sync::Arc;
 use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
+use hoa_tcms_core::adapters::http::handlers::auth_handler::AuthHandler;
 use hoa_tcms_core::adapters::http::handlers::project_handler::ProjectHandler;
 use hoa_tcms_core::adapters::http::handlers::sharing_handler::SharingHandler;
 use hoa_tcms_core::adapters::http::handlers::test_case_file_handler::TestCaseFileHandler;
 use hoa_tcms_core::adapters::http::handlers::test_execution_handler::TestExecutionHandler;
 use hoa_tcms_core::adapters::http::handlers::test_plan_handler::TestPlanHandler;
 use hoa_tcms_core::adapters::http::handlers::test_run_handler::TestRunHandler;
+use hoa_tcms_core::application::repositories::setup_seeder::SetupSeeder;
+use hoa_tcms_core::application::services::auth_service::AuthService;
 use hoa_tcms_core::application::services::authorization::AuthorizationService;
+use hoa_tcms_core::application::services::password_hasher::PasswordHasher;
 use hoa_tcms_core::application::services::project_service::ProjectService;
 use hoa_tcms_core::application::services::sharing_service::SharingService;
 use hoa_tcms_core::application::services::test_case_file_service::TestCaseFileService;
@@ -28,6 +33,8 @@ use hoa_tcms_core::application::services::test_run_service::TestRunService;
 use hoa_tcms_core::configure_app;
 use hoa_tcms_core::infrastructure::config::AppState;
 use hoa_tcms_core::infrastructure::config::metadata_seeder::ConfigFileSeeder;
+use hoa_tcms_core::infrastructure::config::setup_seeder::ConfigFileSetupSeeder;
+use hoa_tcms_core::infrastructure::crypto::pbkdf2_hasher::Pbkdf2Hasher;
 use hoa_tcms_core::infrastructure::postgres::repositories::admin_bypass_repository::SqlAdminBypassRepository;
 use hoa_tcms_core::infrastructure::postgres::repositories::object_sharing_repository::SqlObjectSharingRepository;
 use hoa_tcms_core::infrastructure::postgres::repositories::permission_resolver::SqlPermissionResolver;
@@ -38,6 +45,7 @@ use hoa_tcms_core::infrastructure::postgres::repositories::test_case_result_repo
 use hoa_tcms_core::infrastructure::postgres::repositories::test_execution_repository::SqlTestExecutionRepository;
 use hoa_tcms_core::infrastructure::postgres::repositories::test_plan_repository::SqlTestPlanRepository;
 use hoa_tcms_core::infrastructure::postgres::repositories::test_run_repository::SqlTestRunRepository;
+use hoa_tcms_core::infrastructure::postgres::repositories::user_repository::SqlUserRepository;
 use hoa_tcms_core::infrastructure::redis::session_store::RedisSessionStore;
 use hoa_tcms_core::infrastructure::storage::LocalFileStorage;
 
@@ -118,6 +126,23 @@ async fn main() -> std::io::Result<()> {
     let db = SqlxPostgresConnector::from_sqlx_postgres_pool(pool.clone());
 
     info!("SeaORM connection wrapper created");
+
+    // -----------------------------------------------------------------------
+    // Seed global reference data (permissions, roles, groups).
+    // -----------------------------------------------------------------------
+    let setup_config_path = std::env::var("SETUP_CONFIG_PATH")
+        .unwrap_or_else(|_| "config/default-setup.yaml".to_string());
+    let setup_seeder = ConfigFileSetupSeeder::new(
+        &db,
+        ConfigFileSetupSeeder::load_config(&setup_config_path).unwrap_or_else(|e| {
+            tracing::warn!(error = %e, "failed to load setup config; reference data will be empty");
+            ConfigFileSetupSeeder::empty_config()
+        }),
+    );
+
+    if let Err(e) = setup_seeder.seed().await {
+        tracing::error!(error = %e, "setup seeding failed; system may be missing reference data");
+    }
 
     // -----------------------------------------------------------------------
     // Create Redis client and session store.
@@ -256,6 +281,20 @@ async fn main() -> std::io::Result<()> {
     let sharing_service = Arc::new(SharingService::new(sharing_repo, auth_service.clone()));
     let sharing_handler = Arc::new(SharingHandler::new(sharing_service));
 
+    // Auth service dependencies.
+    let user_repo = Box::new(SqlUserRepository::new(db.clone()));
+    let pbkdf2_iterations = std::env::var("PBKDF2_ITERATIONS")
+        .ok()
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(600_000);
+    let password_hasher: Arc<dyn PasswordHasher> = Arc::new(Pbkdf2Hasher::new(pbkdf2_iterations));
+    let login_service = Arc::new(AuthService::new(
+        user_repo,
+        password_hasher,
+        session_store.clone(),
+    ));
+    let auth_handler = Arc::new(AuthHandler::new(login_service));
+
     // -----------------------------------------------------------------------
     // Build and run the server with shared application state.
     // -----------------------------------------------------------------------
@@ -273,6 +312,7 @@ async fn main() -> std::io::Result<()> {
     });
 
     let session_store_for_app = session_store.clone();
+    let auth_handler_for_app = auth_handler.clone();
     let project_handler_for_app = project_handler.clone();
     let test_execution_handler_for_app = test_execution_handler.clone();
     let test_case_file_handler_for_app = test_case_file_handler.clone();
@@ -280,13 +320,31 @@ async fn main() -> std::io::Result<()> {
     let test_run_handler_for_app = test_run_handler.clone();
     let sharing_handler_for_app = sharing_handler.clone();
 
+    // CORS — allow the Leptos frontend (localhost:3000 by default) to call the
+    // API cross-origin with credentials (session cookie).
+    let allowed_origin = std::env::var("CORS_ALLOWED_ORIGIN")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+
     actix_web::HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin(&allowed_origin)
+            .allowed_methods(vec!["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+            .allowed_headers(vec![
+                actix_web::http::header::CONTENT_TYPE,
+                actix_web::http::header::ACCEPT,
+                actix_web::http::header::AUTHORIZATION,
+            ])
+            .supports_credentials()
+            .max_age(3600);
+
         actix_web::App::new()
+            .wrap(cors)
             .app_data(app_state.clone())
             .app_data(web::Data::from(session_store_for_app.clone()))
             .configure(|cfg| {
                 configure_app(
                     cfg,
+                    auth_handler_for_app.clone(),
                     project_handler_for_app.clone(),
                     test_execution_handler_for_app.clone(),
                     test_case_file_handler_for_app.clone(),

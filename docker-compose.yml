@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   postgres:
     image: postgres:15
@@ -13,7 +11,8 @@ services:
       POSTGRES_DB: hoa_tcms
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d:ro
+      # Migrations are managed by sqlx-cli (make migrate), not docker initdb.
+      # - ./migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test:
         [

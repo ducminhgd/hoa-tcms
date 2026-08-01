@@ -52,6 +52,7 @@ fn model_to_role(model: roles::Model) -> RepositoryResult<Role> {
         name: model.name,
         status,
         is_system: model.is_system,
+        description: model.description,
         created_by: model.created_by,
         created_at: DateTime::<Utc>::from_naive_utc_and_offset(model.created_at, Utc),
         updated_by: model.updated_by,
@@ -107,6 +108,7 @@ impl RoleRepository for SqlRoleRepository {
             name: Set(role.name.clone()),
             status: Set(role.status.to_string()),
             is_system: Set(role.is_system),
+            description: Set(role.description.clone()),
             created_by: Set(role.created_by),
             updated_by: Set(role.updated_by),
             ..Default::default()

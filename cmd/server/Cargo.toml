@@ -9,6 +9,7 @@ hoa-tcms-core = { path = "../../internal" }
 hoa-tcms-pkg = { path = "../../pkg" }
 
 actix-web.workspace = true
+actix-cors.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

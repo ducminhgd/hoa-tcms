@@ -11,6 +11,8 @@ pub struct Model {
     /// System-protected roles cannot be deleted or have permissions modified
     /// through the application API. Set TRUE for the seeded "System Admin" role.
     pub is_system: bool,
+    /// Human-readable summary of the role's purpose.
+    pub description: Option<String>,
     pub created_by: Option<i64>,
     pub created_at: DateTime,
     pub updated_by: Option<i64>,

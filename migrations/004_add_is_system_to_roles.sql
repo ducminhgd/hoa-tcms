@@ -1,5 +1,5 @@
 -- ==========================================================================
--- Migration: 005_add_is_system_to_roles
+-- Migration: 004_add_is_system_to_roles
 -- Description: Add is_system boolean column to the roles table
 --
 -- The is_system flag replaces the fragile case-sensitive name check for

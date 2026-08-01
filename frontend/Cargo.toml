@@ -1,0 +1,62 @@
+[package]
+name = "hoa-tcms-frontend"
+version.workspace = true
+edition.workspace = true
+description = "HOA TCMS — Leptos SSR + WASM frontend"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+leptos = { version = "0.7", features = ["csr", "hydrate"] }
+leptos_axum = { version = "0.7", optional = true }
+leptos_meta = "0.7"
+leptos_router = "0.7"
+console_error_panic_hook = "0.1"
+console_log = "1"
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+gloo-net = { version = "0.6", features = ["http"] }
+log = "0.4"
+wasm-bindgen = { version = "0.2", optional = true }
+web-sys = "0.3"
+# NOTE: must stay on axum 0.7 — `leptos_axum 0.7` is built against axum 0.7,
+# so `Router::leptos_routes` only exists on axum 0.7's `Router`.
+axum = { version = "0.7", optional = true }
+tokio = { workspace = true, features = ["rt-multi-thread"], optional = true }
+tower = { version = "0.5", optional = true }
+tower-http = { version = "0.6", features = ["fs"], optional = true }
+
+[features]
+hydrate = [
+    "leptos/hydrate",
+    "dep:wasm-bindgen",
+]
+ssr = [
+    "dep:leptos_axum",
+    "dep:axum",
+    "dep:tokio",
+    "dep:tower",
+    "dep:tower-http",
+    "leptos/ssr",
+    "leptos_meta/ssr",
+    "leptos_router/ssr",
+]
+
+[package.metadata.leptos]
+name = "hoa-tcms-frontend"
+output-name = "hoa-frontend"
+bin-package = "hoa-tcms-frontend"
+bin-target = "hoa-tcms-frontend"
+site-root = "target/site"
+site-pkg-dir = "pkg"
+assets-dir = "public"
+style-file = "style/output.css"
+env = "DEV"
+site-addr = "127.0.0.1:3000"
+reload-port = 3001
+
+[[bin]]
+name = "hoa-tcms-frontend"
+path = "src/main.rs"

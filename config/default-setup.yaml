@@ -1,0 +1,185 @@
+# HOA TCMS — Default Setup Configuration
+# ============================================================================
+#
+# This file defines the global reference data seeded at application startup
+# by ConfigFileSetupSeeder: permissions, system groups, built-in roles, and
+# role-permission mappings.
+#
+# All seeding is idempotent — safe to re-run on every server start or via
+# `make seed`.
+#
+# Permission code format: {resource}:{action}
+# Actions: create, read, read_list, update, select, delete, upload
+
+permissions:
+  # -----------------------------------------------------------------------
+  # User
+  # -----------------------------------------------------------------------
+  - { code: "user:create", name: "Create User" }
+  - { code: "user:read", name: "Read User" }
+  - { code: "user:read_list", name: "List Users" }
+  - { code: "user:update", name: "Update User" }
+  - { code: "user:select", name: "Select User" }
+  - { code: "user:delete", name: "Delete User" }
+
+  # -----------------------------------------------------------------------
+  # Group
+  # -----------------------------------------------------------------------
+  - { code: "group:create", name: "Create Group" }
+  - { code: "group:read", name: "Read Group" }
+  - { code: "group:read_list", name: "List Groups" }
+  - { code: "group:update", name: "Update Group" }
+  - { code: "group:select", name: "Select Group" }
+  - { code: "group:delete", name: "Delete Group" }
+
+  # -----------------------------------------------------------------------
+  # Role
+  # -----------------------------------------------------------------------
+  - { code: "role:create", name: "Create Role" }
+  - { code: "role:read", name: "Read Role" }
+  - { code: "role:read_list", name: "List Roles" }
+  - { code: "role:update", name: "Update Role" }
+  - { code: "role:select", name: "Select Role" }
+  - { code: "role:delete", name: "Delete Role" }
+
+  # -----------------------------------------------------------------------
+  # Permission (read-only through the API)
+  # -----------------------------------------------------------------------
+  - { code: "permission:read_list", name: "List Permissions" }
+
+  # -----------------------------------------------------------------------
+  # Project
+  # -----------------------------------------------------------------------
+  - { code: "project:create", name: "Create Project" }
+  - { code: "project:read", name: "Read Project" }
+  - { code: "project:read_list", name: "List Projects" }
+  - { code: "project:update", name: "Update Project" }
+  - { code: "project:select", name: "Select Project" }
+  - { code: "project:delete", name: "Delete Project" }
+
+  # -----------------------------------------------------------------------
+  # Test Case
+  # -----------------------------------------------------------------------
+  - { code: "test_case:create", name: "Create Test Case" }
+  - { code: "test_case:read", name: "Read Test Case" }
+  - { code: "test_case:read_list", name: "List Test Cases" }
+  - { code: "test_case:update", name: "Update Test Case" }
+  - { code: "test_case:select", name: "Select Test Case" }
+  - { code: "test_case:delete", name: "Delete Test Case" }
+
+  # -----------------------------------------------------------------------
+  # Test Plan
+  # -----------------------------------------------------------------------
+  - { code: "test_plan:create", name: "Create Test Plan" }
+  - { code: "test_plan:read", name: "Read Test Plan" }
+  - { code: "test_plan:read_list", name: "List Test Plans" }
+  - { code: "test_plan:update", name: "Update Test Plan" }
+  - { code: "test_plan:select", name: "Select Test Plan" }
+  - { code: "test_plan:delete", name: "Delete Test Plan" }
+
+  # -----------------------------------------------------------------------
+  # Test Run
+  # -----------------------------------------------------------------------
+  - { code: "test_run:create", name: "Create Test Run" }
+  - { code: "test_run:read", name: "Read Test Run" }
+  - { code: "test_run:read_list", name: "List Test Runs" }
+  - { code: "test_run:update", name: "Update Test Run" }
+  - { code: "test_run:select", name: "Select Test Run" }
+  - { code: "test_run:delete", name: "Delete Test Run" }
+
+  # -----------------------------------------------------------------------
+  # Test Execution
+  # -----------------------------------------------------------------------
+  - { code: "test_execution:create", name: "Create Test Execution" }
+  - { code: "test_execution:read", name: "Read Test Execution" }
+  - { code: "test_execution:read_list", name: "List Test Executions" }
+  - { code: "test_execution:update", name: "Update Test Execution" }
+  - { code: "test_execution:select", name: "Select Test Execution" }
+  - { code: "test_execution:delete", name: "Delete Test Execution" }
+
+  # -----------------------------------------------------------------------
+  # Share (deduplicated — original SQL had share:create and share:delete
+  # listed twice with inconsistent names)
+  # -----------------------------------------------------------------------
+  - { code: "share:create", name: "Create Share" }
+  - { code: "share:read", name: "Read Share" }
+  - { code: "share:delete", name: "Delete Share" }
+
+  # -----------------------------------------------------------------------
+  # Test Case File
+  # -----------------------------------------------------------------------
+  - { code: "test_case_file:upload", name: "Upload Test Case File" }
+  - { code: "test_case_file:read", name: "Read Test Case File" }
+  - { code: "test_case_file:delete", name: "Delete Test Case File" }
+
+# ============================================================================
+# System Groups
+# ============================================================================
+# These groups are created with NULL created_by/updated_by because no user
+# exists at seed time. They are system-owned and not deletable through the
+# application API (enforced at the service layer).
+groups:
+  - name: "Default"
+    description: "Default group for all new users — assigned automatically at registration"
+  - name: "System Admin"
+    description: "System administrators group — members have full system access"
+    roles:
+      - "System Admin"
+
+# ============================================================================
+# Built-in System Roles
+# ============================================================================
+# - is_system: true means the role is protected and cannot be deleted or have
+#   its permissions modified through the application API.
+# - permissions: list of permission codes. The special value "*" grants every
+#   seeded permission. Glob patterns like "project:*" match all codes
+#   starting with "project:".
+roles:
+  - name: "System Admin"
+    description: "Full system access — bypasses all permission checks"
+    is_system: true
+    permissions:
+      - "*"
+
+  - name: "Project Manager"
+    description: "Full access to projects, test plans, runs, executions, and sharing"
+    is_system: true
+    permissions:
+      - "project:*"
+      - "test_case:*"
+      - "test_plan:*"
+      - "test_run:*"
+      - "test_execution:*"
+      - "test_case_file:*"
+      - "share:*"
+
+  - name: "Tester"
+    description: "Execute tests and report results"
+    is_system: true
+    permissions:
+      - "test_case:read"
+      - "test_case:read_list"
+      - "test_run:read"
+      - "test_run:read_list"
+      - "test_execution:create"
+      - "test_execution:read"
+      - "test_execution:read_list"
+      - "test_execution:update"
+      - "test_case_file:upload"
+      - "test_case_file:read"
+
+  - name: "Viewer"
+    description: "Read-only access to projects and test artifacts"
+    is_system: true
+    permissions:
+      - "project:read"
+      - "project:read_list"
+      - "test_case:read"
+      - "test_case:read_list"
+      - "test_plan:read"
+      - "test_plan:read_list"
+      - "test_run:read"
+      - "test_run:read_list"
+      - "test_execution:read"
+      - "test_execution:read_list"
+      - "test_case_file:read"

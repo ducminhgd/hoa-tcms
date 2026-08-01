@@ -3,7 +3,11 @@
 # Common development tasks.
 # Requires: cargo, docker (for dev services), sqlx-cli (for migrations).
 
-.PHONY: help build test lint fmt dev clean migrate seed docker-up docker-down
+# Default DATABASE_URL for local development (matches docker-compose.yml).
+# Override with: make migrate DATABASE_URL="postgres://..."
+DATABASE_URL ?= postgres://tcms:tcms_pass@localhost:5432/hoa_tcms
+
+.PHONY: help build test lint fmt dev run frontend frontend-build clean migrate migrate-revert migrate-info seed migrate-all createsuperuser gen-perms docker-up docker-down
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -63,38 +67,51 @@ check: ## Run both fmt-check and clippy
 # ------------------------------------------------------------------
 
 dev: ## Start development server with hot-reload (requires cargo-watch)
-	cargo watch -x run
+	cargo watch -x "run --bin server"
 
 dev-quiet: ## Start dev server with minimal logging
-	RUST_LOG=warn cargo watch -x run
+	RUST_LOG=warn cargo watch -x "run --bin server"
+
+run: ## Start the server
+	cargo run --bin server
+
+frontend: ## Start the Leptos frontend with hot-reload (requires cargo-leptos)
+	cd frontend && cargo leptos serve
+
+frontend-build: ## Build the Leptos frontend for production
+	cd frontend && cargo leptos build
 
 # ------------------------------------------------------------------
 # Database
 # ------------------------------------------------------------------
 
 db-create: ## Create the database (requires sqlx-cli)
-	sqlx database create
+	@DATABASE_URL=$(DATABASE_URL) sqlx database create
 
 db-drop: ## Drop the database (requires sqlx-cli)
-	sqlx database drop
+	@DATABASE_URL=$(DATABASE_URL) sqlx database drop
 
 migrate: ## Run pending database migrations
-	sqlx migrate run
+	@DATABASE_URL=$(DATABASE_URL) sqlx migrate run
 
 migrate-revert: ## Revert the last migration
-	sqlx migrate revert
+	@DATABASE_URL=$(DATABASE_URL) sqlx migrate revert
 
-migrate-pending: ## List pending migrations
-	sqlx migrate info
+migrate-info: ## Show migration status (applied + pending)
+	@DATABASE_URL=$(DATABASE_URL) sqlx migrate info
 
-seed: ## Run seed data migration
+seed: ## Run seed data via Rust seeder (idempotent; safe to re-run)
 	@echo "Running seed data..."
-	@if [ -f migrations/002_seed_permissions.sql ]; then \
-		echo "Running permission seed..."; \
-	fi
+	@DATABASE_URL=$(DATABASE_URL) cargo run --bin seeder
 	@echo "Seed complete."
 
-migrate-all: migrate seed ## Run migrations and seed data
+migrate-all: migrate seed ## Run all migrations and seed data
+
+createsuperuser: ## Create a superuser (added to System Admin group)
+	@DATABASE_URL=$(DATABASE_URL) cargo run --bin createsuperuser -- \
+		--username $(USERNAME) --email $(EMAIL) \
+		--fullname "$(FULLNAME)"
+	@# Usage: make createsuperuser USERNAME=admin EMAIL=admin@example.com FULLNAME="System Admin"
 
 # ------------------------------------------------------------------
 # Docker
@@ -126,6 +143,9 @@ clean-all: clean ## Clean build artifacts and node/data directories
 # ------------------------------------------------------------------
 # Utilities
 # ------------------------------------------------------------------
+
+gen-perms: ## Generate CRUD permission YAML for a model. Usage: make gen-perms MODELS=invoice,payment
+	@./scripts/gen-permissions $(shell echo $(MODELS) | tr ',' ' ')
 
 outdated: ## Check for outdated dependencies
 	cargo outdated

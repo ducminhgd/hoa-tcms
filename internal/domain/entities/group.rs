@@ -26,13 +26,15 @@ pub struct Group {
     pub status: GroupStatus,
 
     /// ID of the user who created this group.
-    pub created_by: i64,
+    /// `None` for system-seeded groups.
+    pub created_by: Option<i64>,
 
     /// Timestamp of creation.
     pub created_at: DateTime<Utc>,
 
     /// ID of the user who last updated this group.
-    pub updated_by: i64,
+    /// `None` for system-seeded groups.
+    pub updated_by: Option<i64>,
 
     /// Timestamp of the last update.
     pub updated_at: DateTime<Utc>,
@@ -54,8 +56,8 @@ impl Group {
     ///
     /// * `name` — Unique group name.
     /// * `description` — Optional description.
-    /// * `created_by` — ID of the creating user (also used as `updated_by`).
-    pub fn create(name: String, description: Option<String>, created_by: i64) -> Self {
+    /// * `created_by` — ID of the creating user, or `None` for system-seeded groups.
+    pub fn create(name: String, description: Option<String>, created_by: Option<i64>) -> Self {
         let now = Utc::now();
         Self {
             id: 0,
@@ -88,31 +90,38 @@ mod tests {
 
     #[test]
     fn create_active_group() {
-        let group = Group::create("Testers".into(), Some("Quality team".into()), 1);
+        let group = Group::create("Testers".into(), Some("Quality team".into()), Some(1));
         assert_eq!(group.name, "Testers");
         assert_eq!(group.description.as_deref(), Some("Quality team"));
-        assert_eq!(group.created_by, 1);
-        assert_eq!(group.updated_by, 1);
+        assert_eq!(group.created_by, Some(1));
+        assert_eq!(group.updated_by, Some(1));
         assert!(group.is_active());
         assert!(!group.is_deleted());
     }
 
     #[test]
     fn create_group_without_description() {
-        let group = Group::create("Developers".into(), None, 2);
+        let group = Group::create("Developers".into(), None, Some(2));
         assert!(group.description.is_none());
         assert!(group.is_active());
     }
 
     #[test]
+    fn create_group_without_creator() {
+        let group = Group::create("Seeded Group".into(), None, None);
+        assert!(group.created_by.is_none());
+        assert!(group.updated_by.is_none());
+    }
+
+    #[test]
     fn is_deleted_returns_false_for_new_group() {
-        let group = Group::create("Testers".into(), None, 1);
+        let group = Group::create("Testers".into(), None, Some(1));
         assert!(!group.is_deleted());
     }
 
     #[test]
     fn deleted_group_reports_deleted() {
-        let mut group = Group::create("Testers".into(), None, 1);
+        let mut group = Group::create("Testers".into(), None, Some(1));
         group.deleted_at = Some(Utc::now());
         group.deleted_by = Some(1);
         assert!(group.is_deleted());

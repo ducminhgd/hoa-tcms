@@ -1,0 +1,18 @@
+[package]
+name = "hoa-tcms-seeder"
+version.workspace = true
+edition.workspace = true
+description = "HOA TCMS — standalone seed binary for reference data"
+
+[dependencies]
+hoa-tcms-core = { path = "../../internal" }
+sea-orm.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+dotenvy.workspace = true
+
+[[bin]]
+name = "seeder"
+path = "main.rs"

@@ -3,6 +3,7 @@
 //! Handlers parse requests, call use cases, and format responses. They
 //! contain **no business logic** — only translation and validation.
 
+pub mod auth_handler;
 pub mod project_handler;
 pub mod sharing_handler;
 pub mod test_case_file_handler;

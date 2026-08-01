@@ -1,12 +1,12 @@
 -- ==========================================================================
--- Migration: 002_seed_permissions (NO-OP)
+-- Migration: 005_seed_system_admin_role (NO-OP)
 -- ==========================================================================
--- Permissions are now seeded at application startup by the Rust
--- `ConfigFileSetupSeeder` (see `config/default-setup.yaml`).
+-- The System Admin role and its permission assignments are now seeded at
+-- application startup by the Rust `ConfigFileSetupSeeder`
+-- (see `config/default-setup.yaml`).
 --
 -- This migration file is preserved as a no-op to maintain the migration
--- chain for existing databases. New databases get permissions seeded
--- automatically when the server starts.
+-- chain for existing databases.
 --
 -- See `internal/infrastructure/config/setup_seeder.rs` for the
 -- current implementation.

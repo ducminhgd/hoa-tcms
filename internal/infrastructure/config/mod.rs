@@ -1,6 +1,7 @@
 //! Configuration — application state and environment variable loading.
 
 pub mod metadata_seeder;
+pub mod setup_seeder;
 
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;

@@ -17,6 +17,7 @@ pub mod infrastructure;
 use actix_web::web;
 use std::sync::Arc;
 
+use crate::adapters::http::handlers::auth_handler::AuthHandler;
 use crate::adapters::http::handlers::project_handler::ProjectHandler;
 use crate::adapters::http::handlers::sharing_handler::SharingHandler;
 use crate::adapters::http::handlers::test_case_file_handler::TestCaseFileHandler;
@@ -32,6 +33,7 @@ use crate::application::services::session_store::SessionStore;
 #[allow(clippy::too_many_arguments)]
 pub fn configure_app(
     cfg: &mut web::ServiceConfig,
+    auth_handler: Arc<AuthHandler>,
     project_handler: Arc<ProjectHandler>,
     test_execution_handler: Arc<TestExecutionHandler>,
     test_case_file_handler: Arc<TestCaseFileHandler>,
@@ -41,6 +43,7 @@ pub fn configure_app(
     session_store: Arc<dyn SessionStore>,
 ) {
     // Register services as app data for handler extraction.
+    cfg.app_data(web::Data::new(auth_handler));
     cfg.app_data(web::Data::new(project_handler));
     cfg.app_data(web::Data::new(test_execution_handler));
     cfg.app_data(web::Data::new(test_case_file_handler));
